@@ -4,6 +4,6 @@
 import './test';
 
 // call examples
-import './examples';
+import './src/_entry';
 
 // this program will die at './examples' module
