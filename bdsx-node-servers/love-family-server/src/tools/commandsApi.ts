@@ -7,7 +7,8 @@ export const createCommandsApi = (system: IVanillaServerSystem) => {
             system.executeCommand(`/tellraw ${playerName} ${messageJson}`, () => { });
         },
         closeChat: (playerName: string) => {
-            //  system.executeCommand(`/execute ${playerName} ~~~ tp ${playerName} ~~~`, () => { });
+            // TODO: What is the most non-intrusive way to force the chat to close on the client?
+            // system.executeCommand(`/execute ${playerName} ~~~ tp ${playerName} ~~~`, () => { });
         },
     };
 

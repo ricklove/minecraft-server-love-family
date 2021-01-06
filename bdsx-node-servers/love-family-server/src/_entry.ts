@@ -1,6 +1,6 @@
 import { startPacketLogger } from "./tools/packetLogger";
-import { chat, CANCEL } from 'bdsx';
-import { createCommandsApi } from "./tools/commands";
+import { command, chat, CANCEL } from 'bdsx';
+import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
 
@@ -9,6 +9,49 @@ const commandsApi = createCommandsApi(system);
 const formsApi = createFormsApi();
 
 startPacketLogger();
+
+// Command Handler
+command.net.on((ev) => {
+
+    const actor = ev.networkIdentifier.getActor();
+    if (!actor) {
+        console.warn(`missing actor`);
+        return;
+    }
+
+    const isPlayer = actor.isPlayer();
+    const entity = actor.getEntity();
+    if (!entity || !isPlayer) {
+        console.warn(`missing entity or not player`);
+        return;
+    }
+
+    const name = system.getComponent(entity, MinecraftComponent.Nameable);
+    if (!name) {
+        console.warn(`missing name`);
+        return;
+    }
+    const playerName = name.data.name;
+
+    if (ev.command.toLowerCase().startsWith('/form modal')) {
+        (async () => {
+            await sendFormExample_modal(formsApi, ev.networkIdentifier, playerName, commandsApi);
+        })();
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/form simple')) {
+        (async () => {
+            await sendFormExample_simple(formsApi, ev.networkIdentifier, playerName, commandsApi);
+        })();
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/form custom')) {
+        (async () => {
+            await sendFormExample_custom(formsApi, ev.networkIdentifier, playerName, commandsApi);
+        })();
+        return CANCEL;
+    }
+});
 
 // Chat Handler
 chat.on(ev => {

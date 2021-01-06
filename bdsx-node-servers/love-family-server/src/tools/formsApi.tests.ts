@@ -1,5 +1,5 @@
 import { NetworkIdentifier } from "bdsx";
-import { CommandsApiType } from "./commands";
+import { CommandsApiType } from "./commandsApi";
 import { FormsApiType } from "./formsApi";
 
 export const sendFormExample_simple = async (formsApi: FormsApiType, networkIdentifier: NetworkIdentifier, playerName: string, commandsApi: CommandsApiType) => {
