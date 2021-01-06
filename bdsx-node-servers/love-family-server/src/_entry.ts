@@ -82,7 +82,7 @@ command.net.on((ev) => {
 const startMathGame = () => {
     console.log('startMathGame');
     mathGame.startMathGame(formsApi, commandsApi, system, {
-        intervalTimeMs: 30 * 1000,
+        intervalTimeMs: 20 * 1000,
         players: connectionsApi.getPlayerConnections()
     });
 };

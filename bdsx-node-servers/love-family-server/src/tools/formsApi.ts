@@ -1,6 +1,9 @@
 import { netevent, createPacket, sendPacket, PacketId, NetworkIdentifier } from 'bdsx';
 
-// Credit: Not sure who to credit for figuring out this format, but thanks to those who figured out the technical details for this
+// Credits: Thanks for these guys for their great work!
+// Based on: https://github.com/randommouse/bdsx-scripts/blob/main/formsapi.ts @☮madeofstown 
+// And: https://github.com/Rjlintkh/bdsx-scripts/blob/main/scripts/forms.js @P Jai Rjlin 
+// And: https://github.com/karikera/bdsx/wiki/Structure-of-Cxx-packets
 
 type FormButtonItem = {
     text: string,
