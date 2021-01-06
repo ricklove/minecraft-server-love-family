@@ -76,5 +76,5 @@ export const sendFormExample_custom = async (formsApi: FormsApiType, networkIden
     
         You will${leggoMyEggo ? '' : ' NOT'} leggo my eggo.
     
-    `.split('/n').map(x => x.trim()).join('/n'));
+    `.split('\n').map(x => x.trim()).join('\n'));
 };
