@@ -1,4 +1,6 @@
 import { netevent, createPacket, sendPacket, PacketId, NetworkIdentifier } from 'bdsx';
+import { RmOptions } from 'fs';
+import { CommandsType } from './commands';
 
 
 const createSimpleForm = (options: {
@@ -7,6 +9,7 @@ const createSimpleForm = (options: {
     buttons: {
         text: string,
         image?: {
+            // Just shows loading
             type: 'path' | 'url',
             data: string,
         }
@@ -30,8 +33,8 @@ const createSimpleForm = (options: {
 const createModalForm = (options: {
     title: string,
     content: string,
-    leftButton: string,
-    rightButton: string,
+    buttonOK: string,
+    buttonCancel: string,
     // leftButton: {
     //     text: string,
     //     image?: {
@@ -51,100 +54,60 @@ const createModalForm = (options: {
     const {
         title,
         content,
-        leftButton,
-        rightButton,
+        buttonOK: button1,
+        buttonCancel: button2,
     } = options;
 
     return {
         type: 'modal',
         title,
         content,
-        button1: leftButton,
-        button2: rightButton,
+        button1,
+        button2,
+    };
+};
+
+type CustomFormItem =
+    { type: 'label', text: string }
+    | { type: 'toggle', text: string, default?: boolean }
+    | { type: 'slider', text: string, min: number, max: number, step?: number, default?: number }
+    | { type: 'step_slider', text: string, steps: string[], default?: number }
+    | { type: 'dropdown', text: string, options: string[], default?: string }
+    | { type: 'input', text: string, placeholder?: string, default?: string }
+    ;
+const createCustomForm = (options: {
+    title: string,
+    content: CustomFormItem[],
+}) => {
+    const {
+        title,
+        content,
+    } = options;
+
+    // Empty required values
+    content.forEach(x => {
+        if (x.type === 'input' && !x.placeholder) {
+            x.placeholder = '';
+        }
+    });
+
+    return {
+        type: 'custom_form',
+        title,
+        content,
     };
 };
 
 
+type ResponseData<T> = {
+    formData: T,
+    networkIdentifier: NetworkIdentifier,
+    formId: number,
+    packetId: string,
+};
+const formCallback = {} as { [formId: number]: (response: ResponseData<unknown>) => void; }
 
-// export class CustomForm {
-//     [key: string]: any
-//     constructor(title = "") {
-//         this.type = "custom_form";
-//         this.title = title;
-//         this.content = [];
-//     }
-//     addLabel(text: any) {
-//         let content = {
-//             type: "label",
-//             text: text
-//         };
-//         this.content.push(content);
-//     }
-//     addToggle(text: any, _default = null) {
-//         let content: { [key: string]: any } = {
-//             type: "toggle",
-//             text: text
-//         };
-//         if (_default !== null) {
-//             content.default = _default;
-//         }
-//         this.content.push(content);
-//     }
-//     addSlider(text: any, min: any, max: any, step = null, _default = null) {
-//         let content: { [key: string]: any } = {
-//             type: "slider",
-//             text: text,
-//             min: min,
-//             max: max
-//         }
-//         if (step !== null) {
-//             content.step = step;
-//         }
-//         if (_default !== null) {
-//             content.default = _default;
-//         }
-//         this.content.push(content);
-//     }
-//     addStepSlider(text: any, steps: null, defaultIndex = null) {
-//         let content: { [key: string]: any } = {
-//             type: "step_slider",
-//             text: text,
-//         }
-//         if (steps !== null) {
-//             content.step = steps;
-//         }
-//         if (defaultIndex !== null) {
-//             content.default = defaultIndex;
-//         }
-//         this.content.push(content);
-//     }
-//     addDropdown(text: any, options: any, _default = null) {
-//         let content: { [key: string]: any } = {
-//             type: "dropdown",
-//             text: text,
-//             options: options
-//         };
-//         if (_default !== null) {
-//             content.default = _default;
-//         }
-//         this.content.push(content);
-//     }
-//     addInput(text: any, placeholder = "", _default = null) {
-//         let content: { [key: string]: any } = {
-//             type: "input",
-//             text: text,
-//             placeholder: placeholder
-//         };
-//         if (_default !== null) {
-//             content.default = _default;
-//         }
-//         this.content.push(content);
-//     }
-// }
-
-const formCallback = {} as { [formId: number]: (data: unknown, networkIdentifier: NetworkIdentifier) => void; }
-
-const sendForm = (networkIdentifier: NetworkIdentifier, form: object): Promise<{ data: unknown, networkIdentifier: NetworkIdentifier }> => {
+const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object): Promise<ResponseData<TFormData>> => {
     let formId = Math.floor(Math.random() * 2147483647) + 1;
     let packet = createPacket(PacketId.ModalFormRequest);
     packet.setUint32(formId, 0x28);
@@ -152,8 +115,8 @@ const sendForm = (networkIdentifier: NetworkIdentifier, form: object): Promise<{
     sendPacket(networkIdentifier, packet);
     packet.dispose();
 
-    const promise = new Promise<{ data: unknown, networkIdentifier: NetworkIdentifier }>((resolve, reject) => {
-        formCallback[formId] = resolve;
+    const promise = new Promise<ResponseData<TFormData>>((resolve, reject) => {
+        formCallback[formId] = (x) => resolve(x as ResponseData<TFormData>);
     });
 
     // console.log(formCallback);
@@ -163,28 +126,84 @@ const sendForm = (networkIdentifier: NetworkIdentifier, form: object): Promise<{
 // Register for responses
 netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, packetId) => {
     ptr.move(1);
-    let data: { [key: string]: any } = {};
-    data.packetId = PacketId[packetId];
-    data.formId = ptr.readVarUint();
-    let rawData = ptr.readVarString();
-    data.formData = rawData.replace(/[\[\]\r\n\1]+|(null,)/gm, "").split(',');
-    console.log(data.packetId);
-    console.log(data.formId);
-    console.log(data.formData);
-    if (formCallback[data.formId]) {
-        formCallback[data.formId](data, networkIdentifier);
+    const formId = ptr.readVarUint();
+    const rawData = ptr.readVarString();
+    //const formData = rawData.replace(/[\[\]\r\n\1]+|(null,)/gm, "").split(',');
+    const formData = JSON.parse(rawData);
+
+    const responseData = {
+        packetId: PacketId[packetId],
+        formId,
+        formData,
+        networkIdentifier,
+    };
+
+    if (formCallback[responseData.formId]) {
+        console.log('formReponse', { responseData, rawData });
+
+        formCallback[responseData.formId](responseData);
         // console.log(formCallback);
-        delete formCallback[data.formId];
+        delete formCallback[responseData.formId];
+    } else {
+        console.log('formReponse IGNORED', { responseData, rawData });
     }
     // console.log(formCallback);
 });
 
 
-export const FormsApi = {
-    sendSimpleForm: (options: Parameters<typeof createSimpleForm>[0] & { networkIdentifier: NetworkIdentifier }) => {
-        return sendForm(options.networkIdentifier, createSimpleForm(options));
-    },
-    sendModalForm: (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier }) => {
-        return sendForm(options.networkIdentifier, createModalForm(options));
-    },
-};
+export const createFormsApi = (commands: CommandsType) => {
+
+    return {
+        sendSimpleForm: async (options: Parameters<typeof createSimpleForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
+            commands.closeChat(options.playerName);
+            return await sendForm(options.networkIdentifier, createSimpleForm(options));
+        },
+        sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+            networkIdentifier: NetworkIdentifier,
+            data: { [name in keyof TContent]: string | number | boolean | null }
+        }> => {
+            commands.closeChat(options.playerName);
+
+            const contentItems = Object.keys(options.content).map(k => ({ name: k as keyof TContent, value: options.content[k] }));
+
+            const result = await sendForm<(null | boolean | number | string)[]>(options.networkIdentifier, createCustomForm({
+                title: options.title,
+                content: contentItems.map(x => x.value),
+            }));
+
+            const data = {} as { [name in keyof TContent]: string | number | boolean | null };
+            contentItems.forEach((x, i) => {
+                const getValue = () => {
+                    const valueRaw = result.formData[i];
+                    if (x.value.type === 'step_slider') {
+                        return x.value.steps[valueRaw as number];
+                    }
+                    if (x.value.type === 'dropdown') {
+                        return x.value.options[valueRaw as number];
+                    }
+                    return valueRaw;
+                };
+
+                data[x.name] = getValue();
+            });
+            return {
+                networkIdentifier: result.networkIdentifier,
+                data,
+            };
+        },
+        sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
+            commands.closeChat(options.playerName);
+            const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options));
+            if (result.formData === 'true') {
+                return {
+                    networkIdentifier: result.networkIdentifier,
+                    data: { isOk: true },
+                };
+            }
+            return {
+                networkIdentifier: result.networkIdentifier,
+                data: { isOk: false },
+            };
+        },
+    };
+}
