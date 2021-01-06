@@ -19,7 +19,7 @@ const startConnectionTracking = () => {
         // TODO: Detect login completion
         setTimeout(() => {
             playersSubscription.next({ action: 'joined', networkIdentifier, playerName: username });
-        }, 3 * 1000);
+        }, 10 * 1000);
     });
     netevent.close.on(networkIdentifier => {
         const playerName = connectionList.get(networkIdentifier) || '';

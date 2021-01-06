@@ -6,6 +6,7 @@ import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom }
 import { mathGame } from "./mathGame";
 import { connectionsApi } from "./tools/playerConnections";
 import { start } from "repl";
+import { testRandomDistribution } from "./utils/random";
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -53,6 +54,12 @@ command.net.on((ev) => {
         (async () => {
             await sendFormExample_custom(formsApi, commandsApi, ev.networkIdentifier, playerName);
         })();
+        return CANCEL;
+    }
+
+    if (ev.command.toLowerCase().startsWith('/test random')) {
+        // Test random distribution
+        testRandomDistribution();
         return CANCEL;
     }
 

@@ -2,57 +2,138 @@ import { Entity, NetworkIdentifier } from "bdsx";
 import { clear } from "console";
 import { CommandsApiType } from "./tools/commandsApi";
 import { FormsApiType } from "./tools/formsApi";
+import { testRandomDistribution } from "./utils/random";
 
 const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string) => {
     console.log('sendMathForm', { playerName });
 
-    const a = Math.floor(Math.random() * 13);
-    const b = Math.floor(Math.random() * 13);
-    const correctAnswer = a * b;
+    // Improve distribution
+    testRandomDistribution();
 
-    const response = await formsApi.sendCustomForm({
-        networkIdentifier,
-        playerName,
-        title: `Multiplication`,
-        content: {
-            questionLabel: { type: 'label', text: `What is ${a} * ${b}` },
-            answerRaw: { type: 'input', text: `Answer` },
-        },
-    });
+    const getWrongAnswerProblem = () => {
+        const playerState = mathState.playerStates.get(playerName);
+        if (!playerState || playerState.wrongAnswers.length <= 0) { return; }
 
-    const { answerRaw } = response.formData;
+        // Chance for new problem
+        if (playerState.wrongAnswers.length < 3 && Math.random() > 0.5) { return; }
+
+        const randomProblem = playerState.wrongAnswers[Math.floor(playerState.wrongAnswers.length * Math.random())];
+        return randomProblem;
+    };
+
+    const getProblem = () => {
+
+        const wProblem = getWrongAnswerProblem();
+        if (wProblem) { return wProblem; }
+
+        const a = Math.floor(Math.random() * 13);
+        const b = Math.floor(Math.random() * 13);
+        const correctAnswer = a * b;
+
+        return { a, b, correctAnswer };
+    };
+
+    const { a, b, correctAnswer } = getProblem();
+
+    const sendProblemForm = async () => {
+        const formType = 'choices';
+        if (formType === 'choices') {
+
+            const wrongChoices = new Set([...new Array(7)].map(() => Math.floor(a + (3 - Math.random() * 5)) * Math.floor(b + ((3 - Math.random() * 5)))));
+            const choices = [correctAnswer, ...[...wrongChoices.values()].map(x => ({ x, rand: Math.random() })).sort((a, b) => a.rand - b.rand).map(x => x.x).slice(0, 3)];
+            const choicesRandomized = choices.map(x => ({ x, rand: Math.random() })).sort((a, b) => a.rand - b.rand).map(x => x.x);
+            const buttons = choicesRandomized.map(x => x + '');
+
+            const response = await formsApi.sendSimpleButtonsForm({
+                networkIdentifier,
+                playerName,
+                title: `Multiplication`,
+                content: `What is ${a} * ${b}`,
+                buttons,
+            });
+            return response.formData.buttonClickedName;
+        }
+
+        const response = await formsApi.sendCustomForm({
+            networkIdentifier,
+            playerName,
+            title: `Multiplication`,
+            content: {
+                questionLabel: { type: 'label', text: `What is ${a} * ${b}` },
+                answerRaw: { type: 'input', text: `Answer` },
+            },
+        });
+        return response.formData.answerRaw;
+    };
+
+    const answerRaw = await sendProblemForm();
     const answer = parseInt(answerRaw + '');
+    const problem = { a, b, correctAnswer };
 
     if (answer === correctAnswer) {
         commandsApi.sendMessage(playerName, 'Excellent!');
-        return { wasCorrect: true };
+        return {
+            wasCorrect: true,
+            answer,
+            answerRaw,
+            problem,
+        };
     }
+
+    const wrongResult = {
+        wasCorrect: false,
+        answer,
+        answerRaw,
+        problem,
+    };
+
+
 
     if (answerRaw === null) {
         commandsApi.sendMessage(playerName, `You didn't even answer the question!`);
-        return { wasCorrect: false };
+        return wrongResult;
     }
 
     if (isNaN(answer)) {
         commandsApi.sendMessage(playerName, `That's not even a number!`);
-        return { wasCorrect: false };
+        return wrongResult;
     }
 
     commandsApi.sendMessage(playerName, `Incorrect ${answer}! ${a} * ${b} = ${correctAnswer}`);
-    return { wasCorrect: false };
+    return wrongResult;
 };
 
-const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: CommandsApiType, system: IVanillaServerSystem, networkIdentifier: NetworkIdentifier, playerName: string, playerEntity: IEntity) => {
+const sendMathFormWithConsequence = async (formsApi: FormsApiType, commandsApi: CommandsApiType, system: IVanillaServerSystem, networkIdentifier: NetworkIdentifier, playerName: string, playerEntity: IEntity) => {
     const result = await mathGame.sendMathForm(formsApi, commandsApi, networkIdentifier, playerName);
-    if (!result.wasCorrect) {
-        const pos = system.getComponent(playerEntity, MinecraftComponent.Position);
-        if (!pos) { return; }
 
-        system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-        system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
-        system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-        system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
+    const playerState = mathState.playerStates.get(playerName);
+    if (!playerState) {
+        return;
     }
+
+    playerState.answerHistory.push({ ...result, time: Date.now() });
+
+    if (result.wasCorrect) {
+        // Remove correct answers
+        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => !(x.a === result.problem.a && x.b === result.problem.b));
+        return;
+    }
+
+    console.log(`Wrong Answer`, {
+        playerName,
+        result,
+        wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.a}*${x.problem.b}!=${x.answerRaw}`)
+    });
+
+    playerState.wrongAnswers.push(result.problem);
+
+    const pos = system.getComponent(playerEntity, MinecraftComponent.Position);
+    if (!pos) { return; }
+
+    system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
+    system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
+    system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
+    system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
 };
 
 type PlayerInfo = { networkIdentifier: NetworkIdentifier, playerName: string, entity: IEntity };
@@ -67,16 +148,20 @@ const continueMathGame = (
 
     if (mathState.timeoutId) { clearTimeout(mathState.timeoutId); }
 
-    const newPlayers = options.players.filter(x => !mathState.players.has(x.playerName));
+    const newPlayers = options.players.filter(x => !mathState.playerStates.has(x.playerName));
     // const droppedPlayerNames = [...mathState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
     newPlayers.forEach(x => {
-        mathState.players.set(x.playerName, {});
+        mathState.playerStates.set(x.playerName, {
+            timeStart: Date.now(),
+            wrongAnswers: [],
+            answerHistory: [],
+        });
         commandsApi.sendMessage(x.playerName, `You are now playing the Math Game!!!`);
     });
 
     mathState.timeoutId = setTimeout(() => {
         options.players.forEach(p => {
-            sendMathFormWithResult(formsApi, commandsApi, system, p.networkIdentifier, p.playerName, p.entity);
+            sendMathFormWithConsequence(formsApi, commandsApi, system, p.networkIdentifier, p.playerName, p.entity);
         });
 
         // Loop
@@ -94,12 +179,16 @@ const stopMathGame = () => {
 
 const mathState = {
     timeoutId: null as null | ReturnType<typeof setTimeout>,
-    players: new Map<string, {}>(),
+    playerStates: new Map<string, {
+        timeStart: number,
+        wrongAnswers: { a: number, b: number, correctAnswer: number }[],
+        answerHistory: { time: number, wasCorrect: boolean, answer: number, answerRaw: unknown, problem: { a: number, b: number, correctAnswer: number } }[],
+    }>(),
 };
 
 export const mathGame = {
     sendMathForm,
-    sendMathFormWithResult,
+    sendMathFormWithResult: sendMathFormWithConsequence,
     startMathGame: continueMathGame,
     stopMathGame,
     isRunning: () => !!mathState.timeoutId,

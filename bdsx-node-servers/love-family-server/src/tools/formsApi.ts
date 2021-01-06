@@ -162,7 +162,24 @@ export const createFormsApi = () => {
                 content: options.content,
                 buttons: buttonItems.map(x => x.value),
             }));
-            const buttonClickedName = result.formData === 'null' || !result.formData ? null : result.formData as keyof TContent;
+            const buttonClickedName = result.formData === null ? null : buttonItems[result.formData as number].name;
+            return {
+                networkIdentifier: result.networkIdentifier,
+                formData: { buttonClickedName }
+            };
+        },
+        sendSimpleButtonsForm: async (options: { title: string, content: string, buttons: string[], networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+            networkIdentifier: NetworkIdentifier,
+            formData: { buttonClickedName: string | null }
+        }> => {
+            const buttonItems = options.buttons;
+
+            const result = await sendForm(options.networkIdentifier, createSimpleForm({
+                title: options.title,
+                content: options.content,
+                buttons: buttonItems.map(x => ({ text: x })),
+            }));
+            const buttonClickedName = result.formData === null ? null : buttonItems[result.formData as number];
             return {
                 networkIdentifier: result.networkIdentifier,
                 formData: { buttonClickedName }
