@@ -69,8 +69,12 @@ export const sendFormExample_custom = async (formsApi: FormsApiType, networkIden
     const { favoriteColor, compliment, leggoMyEggo } = response.formData;
 
     commandsApi.sendMessage(playerName, `Here is your results: 
+
         Your favorite color is ${favoriteColor}.
-        You told me, "${compliment}". I appreciate it!
+    
+        You told me, "${compliment}"...   Thanks! I appreciate it!
+    
         You will${leggoMyEggo ? '' : ' NOT'} leggo my eggo.
+    
     `.split('/n').map(x => x.trim()).join('/n'));
 };
