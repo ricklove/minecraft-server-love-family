@@ -1,5 +1,5 @@
 
-export const createCommands = (system: IVanillaServerSystem) => {
+export const createCommandsApi = (system: IVanillaServerSystem) => {
 
     const commands = {
         sendMessage: (playerName: string, message: string) => {
@@ -14,4 +14,4 @@ export const createCommands = (system: IVanillaServerSystem) => {
     return commands;
 };
 
-export type CommandsType = ReturnType<typeof createCommands>;
+export type CommandsApiType = ReturnType<typeof createCommandsApi>;

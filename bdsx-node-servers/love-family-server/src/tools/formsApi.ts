@@ -1,16 +1,19 @@
 import { netevent, createPacket, sendPacket, PacketId, NetworkIdentifier } from 'bdsx';
 
+// Credit: Not sure who to credit for figuring out this format, but thanks to those who figured out the technical details for this
+
+type FormButtonItem = {
+    text: string,
+    // TODO: Debug: Internet url not working - just shows loading placeholder
+    image?: {
+        type: 'path' | 'url',
+        data: string,
+    }
+};
 const createSimpleForm = (options: {
     title: string,
     content: string,
-    buttons: {
-        text: string,
-        image?: {
-            // Just shows loading
-            type: 'path' | 'url',
-            data: string,
-        }
-    }[],
+    buttons: FormButtonItem[],
 }) => {
 
     const {
@@ -30,8 +33,9 @@ const createSimpleForm = (options: {
 const createModalForm = (options: {
     title: string,
     content: string,
-    buttonOK: string,
-    buttonCancel: string,
+    button1: string,
+    button2: string,
+    // TODO: Test if images are supported here somehow
     // leftButton: {
     //     text: string,
     //     image?: {
@@ -51,8 +55,8 @@ const createModalForm = (options: {
     const {
         title,
         content,
-        buttonOK: button1,
-        buttonCancel: button2,
+        button1,
+        button2,
     } = options;
 
     return {
@@ -116,7 +120,6 @@ const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object)
         formCallback[formId] = (x) => resolve(x as ResponseData<TFormData>);
     });
 
-    // console.log(formCallback);
     return promise;
 }
 
@@ -125,7 +128,6 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
     ptr.move(1);
     const formId = ptr.readVarUint();
     const rawData = ptr.readVarString();
-    //const formData = rawData.replace(/[\[\]\r\n\1]+|(null,)/gm, "").split(',');
     const formData = JSON.parse(rawData);
 
     const responseData = {
@@ -139,24 +141,52 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
         console.log('formReponse', { responseData, rawData });
 
         formCallback[responseData.formId](responseData);
-        // console.log(formCallback);
         delete formCallback[responseData.formId];
     } else {
         console.log('formReponse IGNORED', { responseData, rawData });
     }
-    // console.log(formCallback);
 });
 
 
 export const createFormsApi = () => {
 
     return {
-        sendSimpleForm: async (options: Parameters<typeof createSimpleForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
-            return await sendForm(options.networkIdentifier, createSimpleForm(options));
+        sendSimpleForm: async  <TContent extends { [name: string]: FormButtonItem }>(options: { title: string, content: string, buttons: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+            networkIdentifier: NetworkIdentifier,
+            formData: { buttonClickedName: keyof TContent | null }
+        }> => {
+            const buttonItems = Object.keys(options.content).map(k => ({ name: k as keyof TContent, value: options.content[k] }));
+
+            const result = await sendForm(options.networkIdentifier, createSimpleForm({
+                title: options.title,
+                content: options.content,
+                buttons: buttonItems.map(x => x.value),
+            }));
+            const buttonClickedName = result.formData === 'null' || !result.formData ? null : result.formData as keyof TContent;
+            return {
+                networkIdentifier: result.networkIdentifier,
+                formData: { buttonClickedName }
+            };
+        },
+        sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+            networkIdentifier: NetworkIdentifier,
+            formData: { wasButton1Clicked: boolean }
+        }> => {
+            const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options));
+            if (result.formData === 'true') {
+                return {
+                    networkIdentifier: result.networkIdentifier,
+                    formData: { wasButton1Clicked: true },
+                };
+            }
+            return {
+                networkIdentifier: result.networkIdentifier,
+                formData: { wasButton1Clicked: false },
+            };
         },
         sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
             networkIdentifier: NetworkIdentifier,
-            data: { [name in keyof TContent]: string | number | boolean | null }
+            formData: { [name in keyof TContent]: string | number | boolean | null }
         }> => {
             const contentItems = Object.keys(options.content).map(k => ({ name: k as keyof TContent, value: options.content[k] }));
 
@@ -165,7 +195,7 @@ export const createFormsApi = () => {
                 content: contentItems.map(x => x.value),
             }));
 
-            const data = {} as { [name in keyof TContent]: string | number | boolean | null };
+            const formData = {} as { [name in keyof TContent]: string | number | boolean | null };
             contentItems.forEach((x, i) => {
                 const getValue = () => {
                     const valueRaw = result.formData[i];
@@ -178,31 +208,14 @@ export const createFormsApi = () => {
                     return valueRaw;
                 };
 
-                data[x.name] = getValue();
+                formData[x.name] = getValue();
             });
             return {
                 networkIdentifier: result.networkIdentifier,
-                data,
-            };
-        },
-        sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
-            const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options));
-            if (result.formData === 'true') {
-                return {
-                    networkIdentifier: result.networkIdentifier,
-                    data: { isOk: true },
-                };
-            }
-            return {
-                networkIdentifier: result.networkIdentifier,
-                data: { isOk: false },
+                formData: formData,
             };
         },
     };
 }
 
-// How to use:
-// 
-
-// Singleton Access - if desired
-// export const FormsApi = createFormsApi();
+export type FormsApiType = ReturnType<typeof createFormsApi>;
