@@ -5,7 +5,7 @@ import { createFormsApi } from "./tools/formsApi";
 
 const system = server.registerSystem(0, 0);
 const commands = createCommands(system);
-const formsApi = createFormsApi(commands);
+const formsApi = createFormsApi();
 
 startPacketLogger();
 

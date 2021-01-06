@@ -1,7 +1,4 @@
 import { netevent, createPacket, sendPacket, PacketId, NetworkIdentifier } from 'bdsx';
-import { RmOptions } from 'fs';
-import { CommandsType } from './commands';
-
 
 const createSimpleForm = (options: {
     title: string,
@@ -151,19 +148,16 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
 });
 
 
-export const createFormsApi = (commands: CommandsType) => {
+export const createFormsApi = () => {
 
     return {
         sendSimpleForm: async (options: Parameters<typeof createSimpleForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
-            commands.closeChat(options.playerName);
             return await sendForm(options.networkIdentifier, createSimpleForm(options));
         },
         sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
             networkIdentifier: NetworkIdentifier,
             data: { [name in keyof TContent]: string | number | boolean | null }
         }> => {
-            commands.closeChat(options.playerName);
-
             const contentItems = Object.keys(options.content).map(k => ({ name: k as keyof TContent, value: options.content[k] }));
 
             const result = await sendForm<(null | boolean | number | string)[]>(options.networkIdentifier, createCustomForm({
@@ -192,7 +186,6 @@ export const createFormsApi = (commands: CommandsType) => {
             };
         },
         sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }) => {
-            commands.closeChat(options.playerName);
             const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options));
             if (result.formData === 'true') {
                 return {
@@ -207,3 +200,9 @@ export const createFormsApi = (commands: CommandsType) => {
         },
     };
 }
+
+// How to use:
+// 
+
+// Singleton Access - if desired
+// export const FormsApi = createFormsApi();

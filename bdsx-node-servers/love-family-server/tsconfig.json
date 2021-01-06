@@ -8,6 +8,7 @@
     "alwaysStrict": true,
     "strictNullChecks": true,
     "noImplicitThis": true,
-    "inlineSourceMap": true
+    "inlineSourceMap": true,
+    "outDir": "out",
   }
 }
