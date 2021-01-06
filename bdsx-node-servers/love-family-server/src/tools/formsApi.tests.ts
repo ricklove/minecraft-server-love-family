@@ -2,7 +2,7 @@ import { NetworkIdentifier } from "bdsx";
 import { CommandsApiType } from "./commandsApi";
 import { FormsApiType } from "./formsApi";
 
-export const sendFormExample_simple = async (formsApi: FormsApiType, networkIdentifier: NetworkIdentifier, playerName: string, commandsApi: CommandsApiType) => {
+export const sendFormExample_simple = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string) => {
     console.log('sendFormExample_simple', { playerName });
     const response = await formsApi.sendSimpleForm({
         networkIdentifier,
@@ -29,7 +29,7 @@ export const sendFormExample_simple = async (formsApi: FormsApiType, networkIden
     }
 };
 
-export const sendFormExample_modal = async (formsApi: FormsApiType, networkIdentifier: NetworkIdentifier, playerName: string, commandsApi: CommandsApiType) => {
+export const sendFormExample_modal = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string) => {
     console.log('sendFormExample_modal', { playerName });
     const response = await formsApi.sendModalForm({
         networkIdentifier: networkIdentifier,
@@ -47,7 +47,7 @@ export const sendFormExample_modal = async (formsApi: FormsApiType, networkIdent
     }
 };
 
-export const sendFormExample_custom = async (formsApi: FormsApiType, networkIdentifier: NetworkIdentifier, playerName: string, commandsApi: CommandsApiType) => {
+export const sendFormExample_custom = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string) => {
     console.log('sendFormExample_custom', { playerName });
     const response = await formsApi.sendCustomForm({
         networkIdentifier,

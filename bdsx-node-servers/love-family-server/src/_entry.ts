@@ -1,15 +1,18 @@
 import { startPacketLogger } from "./tools/packetLogger";
-import { command, chat, CANCEL } from 'bdsx';
+import { command, chat, CANCEL, netevent, NetworkIdentifier, PacketId, createPacket, sendPacket } from 'bdsx';
 import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
 import { mathGame } from "./mathGame";
+import { connectionsApi } from "./tools/playerConnections";
+import { start } from "repl";
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
 const formsApi = createFormsApi();
 
 startPacketLogger();
+connectionsApi.startConnectionTracking();
 
 // Command Handler
 command.net.on((ev) => {
@@ -36,154 +39,118 @@ command.net.on((ev) => {
 
     if (ev.command.toLowerCase().startsWith('/form modal')) {
         (async () => {
-            await sendFormExample_modal(formsApi, ev.networkIdentifier, playerName, commandsApi);
+            await sendFormExample_modal(formsApi, commandsApi, ev.networkIdentifier, playerName);
         })();
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/form simple')) {
         (async () => {
-            await sendFormExample_simple(formsApi, ev.networkIdentifier, playerName, commandsApi);
+            await sendFormExample_simple(formsApi, commandsApi, ev.networkIdentifier, playerName);
         })();
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/form custom')) {
         (async () => {
-            await sendFormExample_custom(formsApi, ev.networkIdentifier, playerName, commandsApi);
+            await sendFormExample_custom(formsApi, commandsApi, ev.networkIdentifier, playerName);
         })();
         return CANCEL;
     }
 
-    if (ev.command.toLowerCase().startsWith('/math')) {
+    if (ev.command.toLowerCase().startsWith('/math test')) {
         (async () => {
-            const result = await mathGame.sendMathForm(formsApi, ev.networkIdentifier, playerName, commandsApi);
-            if (!result.wasCorrect) {
-                const pos = system.getComponent(entity, MinecraftComponent.Position);
-                if (!pos) { return; }
-
-                system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-                system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
-                system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-                system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
-            }
+            await mathGame.sendMathFormWithResult(formsApi, commandsApi, system, ev.networkIdentifier, playerName, entity);
         })();
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/math start')) {
+        startMathGame();
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/math stop')) {
+        mathGame.stopMathGame();
         return CANCEL;
     }
 });
 
-// Chat Handler
-chat.on(ev => {
+const startMathGame = () => {
+    console.log('startMathGame');
+    mathGame.startMathGame(formsApi, commandsApi, system, {
+        intervalTimeMs: 30 * 1000,
+        players: connectionsApi.getPlayerConnections()
+    });
+};
+startMathGame();
 
-    const actor = ev.networkIdentifier.getActor();
-    if (!actor) {
-        console.warn(`missing actor`);
-        return;
+connectionsApi.onPlayersChange(({ action }) => {
+    // if (action === 'dropped') { return; }
+
+    // Restart math game if running and new player joined
+    console.log('Restart math game if running');
+    if (mathGame.isRunning()) {
+        startMathGame();
     }
-
-    const isPlayer = actor.isPlayer();
-    const entity = actor.getEntity();
-    if (!entity || !isPlayer) {
-        console.warn(`missing entity or not player`);
-        return;
-    }
-
-    const name = system.getComponent(entity, MinecraftComponent.Nameable);
-    if (!name) {
-        console.warn(`missing name`);
-        return;
-    }
-    const playerName = name.data.name;
-
-    if (ev.message.toLowerCase().startsWith('form modal')) {
-
-        // TODO: Force Close Chat, so timeout is not needed here
-        commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
-
-        setTimeout(async () => {
-            await sendFormExample_modal(formsApi, ev.networkIdentifier, playerName, commandsApi);
-        }, 3000);
-        return;
-    }
-    if (ev.message.toLowerCase().startsWith('form simple')) {
-
-        // TODO: Force Close Chat, so timeout is not needed here
-        commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
-
-        setTimeout(async () => {
-            await sendFormExample_simple(formsApi, ev.networkIdentifier, playerName, commandsApi);
-        }, 3000);
-
-        return;
-    }
-    if (ev.message.toLowerCase().startsWith('form custom')) {
-
-        // TODO: Force Close Chat, so timeout is not needed here
-        commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
-
-        setTimeout(async () => {
-            await sendFormExample_custom(formsApi, ev.networkIdentifier, playerName, commandsApi);
-        }, 3000);
-
-        return;
-    }
-
-    // if (ev.message.toLowerCase().startsWith('form')) {
-
-    //     const message = `Sending a form!`;
-    //     system.executeCommand(`/tellraw ${name.data.name} ${JSON.stringify({ rawtext: [{ text: message }] })}`, () => { });
-
-    //     setTimeout(() => {
-    //         console.log('sendExampleForm', { n: ev.networkIdentifier });
-    //         sendExampleForm(ev.networkIdentifier);
-    //     }, 3000);
-    //     return;
-    // }
-
-    // if (ev.message.toLowerCase().startsWith('math')) {
-
-    //     const count = parseInt(ev.message.replace('math', '').trim(), 10) || 1;
-    //     const message = `${ev.message}: Sending ${count}(${ev.message.replace('math', '').trim()})(${parseInt(ev.message.replace('math', '').trim(), 10)}) math forms!`;
-    //     system.executeCommand(`/tellraw ${name.data.name} ${JSON.stringify({ rawtext: [{ text: message }] })}`, () => { });
-
-    //     const pos = system.getComponent(entity, MinecraftComponent.Position);
-
-    //     setTimeout(() => {
-
-    //         let i = 0;
-    //         const askMath = () => {
-    //             i++;
-
-    //             console.log('sendExampleForm', { n: ev.networkIdentifier });
-    //             sendExampleForm_Math(ev.networkIdentifier, (isCorrect) => {
-    //                 const message = `You answered ${!isCorrect ? 'POORLY' : 'correctly'}!`;
-    //                 system.executeCommand(`/tellraw ${name.data.name} ${JSON.stringify({ rawtext: [{ text: message }] })}`, () => { });
-
-    //                 if (!isCorrect) {
-    //                     system.executeCommand(`/summon lightning_bolt ${pos?.data.x || 0} ${pos?.data.y || 0} ${pos?.data.z || 0}`, () => { });
-    //                     system.executeCommand(`/summon lightning_bolt ${(pos?.data.x || 0) + 1} ${(pos?.data.y || 0) + 0} ${(pos?.data.z || 0) + 1}`, () => { });
-    //                     system.executeCommand(`/summon lightning_bolt ${(pos?.data.x || 0) + 1} ${(pos?.data.y || 0) + 0} ${(pos?.data.z || 0) - 1}`, () => { });
-    //                     system.executeCommand(`/summon lightning_bolt ${(pos?.data.x || 0) - 1} ${(pos?.data.y || 0) + 0} ${(pos?.data.z || 0) + 1}`, () => { });
-    //                     system.executeCommand(`/summon lightning_bolt ${(pos?.data.x || 0) - 1} ${(pos?.data.y || 0) + 0} ${(pos?.data.z || 0) - 1}`, () => { });
-    //                     i--;
-    //                 }
-
-    //                 if (i < count) {
-    //                     askMath();
-    //                 }
-    //             });
-    //         };
-
-    //         askMath();
-
-    //     }, 3000);
-    //     return;
-    // }
-
-    // if (ev.message.toLowerCase().startsWith('where')) {
-
-    //     const pos = system.getComponent(entity, MinecraftComponent.Position);
-
-    //     const message = `You are here: ${JSON.stringify(pos?.data)}!`;
-    //     system.executeCommand(`/tellraw ${name.data.name} ${JSON.stringify({ rawtext: [{ text: message }] })}`, () => { });
-    //     return;
-    // }
 });
+
+command.hook.on((command) => {
+    if (command === '/stop') {
+        mathGame.stopMathGame();
+    }
+});
+
+
+// // Chat Handler
+// chat.on(ev => {
+
+//     const actor = ev.networkIdentifier.getActor();
+//     if (!actor) {
+//         console.warn(`missing actor`);
+//         return;
+//     }
+
+//     const isPlayer = actor.isPlayer();
+//     const entity = actor.getEntity();
+//     if (!entity || !isPlayer) {
+//         console.warn(`missing entity or not player`);
+//         return;
+//     }
+
+//     const name = system.getComponent(entity, MinecraftComponent.Nameable);
+//     if (!name) {
+//         console.warn(`missing name`);
+//         return;
+//     }
+//     const playerName = name.data.name;
+
+//     if (ev.message.toLowerCase().startsWith('form modal')) {
+
+//         // TODO: Force Close Chat, so timeout is not needed here
+//         commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
+
+//         setTimeout(async () => {
+//             await sendFormExample_modal(formsApi, ev.networkIdentifier, playerName, commandsApi);
+//         }, 3000);
+//         return;
+//     }
+//     if (ev.message.toLowerCase().startsWith('form simple')) {
+
+//         // TODO: Force Close Chat, so timeout is not needed here
+//         commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
+
+//         setTimeout(async () => {
+//             await sendFormExample_simple(formsApi, ev.networkIdentifier, playerName, commandsApi);
+//         }, 3000);
+
+//         return;
+//     }
+//     if (ev.message.toLowerCase().startsWith('form custom')) {
+
+//         // TODO: Force Close Chat, so timeout is not needed here
+//         commandsApi.sendMessage(playerName, 'Close the chat to get the form in 3 secs');
+
+//         setTimeout(async () => {
+//             await sendFormExample_custom(formsApi, ev.networkIdentifier, playerName, commandsApi);
+//         }, 3000);
+
+//         return;
+//     }
+// });
