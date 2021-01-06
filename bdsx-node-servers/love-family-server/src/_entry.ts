@@ -3,6 +3,7 @@ import { command, chat, CANCEL } from 'bdsx';
 import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
+import { mathGame } from "./mathGame";
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -48,6 +49,22 @@ command.net.on((ev) => {
     if (ev.command.toLowerCase().startsWith('/form custom')) {
         (async () => {
             await sendFormExample_custom(formsApi, ev.networkIdentifier, playerName, commandsApi);
+        })();
+        return CANCEL;
+    }
+
+    if (ev.command.toLowerCase().startsWith('/math')) {
+        (async () => {
+            const result = await mathGame.sendMathForm(formsApi, ev.networkIdentifier, playerName, commandsApi);
+            if (!result.wasCorrect) {
+                const pos = system.getComponent(entity, MinecraftComponent.Position);
+                if (!pos) { return; }
+
+                system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
+                system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
+                system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
+                system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
+            }
         })();
         return CANCEL;
     }

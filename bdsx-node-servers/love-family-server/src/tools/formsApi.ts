@@ -101,7 +101,7 @@ const createCustomForm = (options: {
 
 
 type ResponseData<T> = {
-    formData: T,
+    formData: null | T,
     networkIdentifier: NetworkIdentifier,
     formId: number,
     packetId: string,
@@ -198,7 +198,7 @@ export const createFormsApi = () => {
             const formData = {} as { [name in keyof TContent]: string | number | boolean | null };
             contentItems.forEach((x, i) => {
                 const getValue = () => {
-                    const valueRaw = result.formData[i];
+                    const valueRaw = result.formData?.[i] ?? null;
                     if (x.value.type === 'step_slider') {
                         return x.value.steps[valueRaw as number];
                     }
