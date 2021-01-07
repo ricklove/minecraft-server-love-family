@@ -79,6 +79,17 @@ type CustomFormItem =
     | { type: 'dropdown', text: string, options: string[], default?: string }
     | { type: 'input', text: string, placeholder?: string, default?: string }
     ;
+type CustomFormData<T extends { [name: string]: CustomFormItem }> = {
+    [K in keyof T]
+    : T[K] extends { type: 'toggle' } ? { value: boolean }
+    : T[K] extends { type: 'slider' } ? { value: number }
+    : T[K] extends { type: 'step_slider' } ? { value: string, index: number }
+    : T[K] extends { type: 'dropdown' } ? { value: string, index: number }
+    : T[K] extends { type: 'input' } ? { value: string }
+    : never
+};
+
+
 const createCustomForm = (options: {
     title: string,
     content: CustomFormItem[],
@@ -151,6 +162,7 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
 });
 
 
+
 export const createFormsApi = () => {
 
     return {
@@ -206,7 +218,7 @@ export const createFormsApi = () => {
         },
         sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
             networkIdentifier: NetworkIdentifier,
-            formData: { [name in keyof TContent]: string | number | boolean | null }
+            formData: null | CustomFormData<TContent>
         }> => {
             const contentItems = Object.keys(options.content).map(k => ({ name: k as keyof TContent, value: options.content[k] }));
 
@@ -215,20 +227,41 @@ export const createFormsApi = () => {
                 content: contentItems.map(x => x.value),
             }));
 
-            const formData = {} as { [name in keyof TContent]: string | number | boolean | null };
+            if (!result.formData) {
+                return {
+                    networkIdentifier: result.networkIdentifier,
+                    formData: null,
+                };
+            }
+
+            const formData = {} as CustomFormData<TContent>;
             contentItems.forEach((x, i) => {
                 const getValue = () => {
-                    const valueRaw = result.formData?.[i] ?? null;
+                    const valueRaw = result.formData?.[i] || null;
                     if (x.value.type === 'step_slider') {
-                        return x.value.steps[valueRaw as number];
+                        return { index: valueRaw as number, value: x.value.steps[valueRaw as number] };
                     }
                     if (x.value.type === 'dropdown') {
-                        return x.value.options[valueRaw as number];
+                        return { index: valueRaw as number, value: x.value.options[valueRaw as number] };
                     }
-                    return valueRaw;
+                    if (x.value.type === 'toggle') {
+                        return { value: valueRaw as boolean };
+                    }
+                    if (x.value.type === 'input') {
+                        return { value: valueRaw as string };
+                    }
+                    if (x.value.type === 'slider') {
+                        return { value: valueRaw as number };
+                    }
+                    if (x.value.type === 'label') {
+                        return {};
+                    }
+                    // This should not occur
+                    return { value: valueRaw };
                 };
 
-                formData[x.name] = getValue();
+                // Name mapping requires any
+                formData[x.name] = getValue() as any;
             });
             return {
                 networkIdentifier: result.networkIdentifier,

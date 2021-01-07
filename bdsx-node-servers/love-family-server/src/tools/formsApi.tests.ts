@@ -66,15 +66,20 @@ export const sendFormExample_custom = async (formsApi: FormsApiType, commandsApi
         },
     });
 
+    if (!response.formData) {
+        commandsApi.sendMessage(playerName, `You did not responde`);
+        return;
+    }
+
     const { favoriteColor, compliment, leggoMyEggo } = response.formData;
 
     commandsApi.sendMessage(playerName, `Here is your results: 
 
-        Your favorite color is ${favoriteColor}.
+        Your favorite color is ${favoriteColor.value}.
     
-        You told me, "${compliment}"...   Thanks! I appreciate it!
+        You told me, "${compliment.value}"...   Thanks! I appreciate it!
     
-        You will${leggoMyEggo ? '' : ' NOT'} leggo my eggo.
+        You will${leggoMyEggo.value ? '' : ' NOT'} leggo my eggo.
     
     `.split('\n').map(x => x.trim()).join('\n'));
 };
