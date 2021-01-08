@@ -145,7 +145,7 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
             const response = await formsApi.sendSimpleButtonsForm({
                 networkIdentifier,
                 playerName,
-                title: `Multiplication`,
+                title: `Math Problem`,
                 content: problem.question,
                 buttons,
             });
@@ -155,7 +155,7 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
         const response = await formsApi.sendCustomForm({
             networkIdentifier,
             playerName,
-            title: `Multiplication`,
+            title: `Math Problem`,
             content: {
                 questionLabel: { type: 'label', text: problem.question },
                 answerRaw: { type: 'input', text: `Answer` },
