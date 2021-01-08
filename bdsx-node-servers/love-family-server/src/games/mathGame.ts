@@ -1,11 +1,17 @@
 import { Entity, NetworkIdentifier } from "bdsx";
 import { CommandsApiType } from "../tools/commandsApi";
 import { FormsApiType } from "../tools/formsApi";
+import { delay } from "../utils/delay";
 import { testRandomDistribution } from "../utils/random";
 import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
 
 const MAX = 12;
 const REVIEW_RATIO = 0.9;
+
+// TODO: Other Math Problems
+// Powers & Roots
+// Reduce Fractions
+// Prime Factors
 
 /** For division, question: product / a = b */
 type MathProblemType = {
@@ -43,6 +49,19 @@ const calculateProblem = ({ a, b, operator }: Pick<MathProblemType, 'operator' |
     const question = `What is ${a} ${operator} ${b}?`;
     const correctAnswer = calculateAnswer({ a, b, operator });
     return { key: question, question, a, b, operator, correctAnswer };
+};
+
+const createRandomProblem = () => {
+    const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
+    const b = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
+    const operator =
+        Math.random() < 0.1 ? '/'
+            : Math.random() < 0.1 ? '-'
+                : Math.random() < 0.3 ? '+'
+                    : '*';
+
+    const problem = calculateProblem({ a, b, operator });
+    return problem;
 };
 
 type MathFormResult = {
@@ -108,15 +127,7 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
         const wProblem = getWrongAnswerProblem();
         if (wProblem) { return wProblem; }
 
-        const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
-        const b = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
-        const operator =
-            Math.random() < 0.1 ? '/'
-                : Math.random() < 0.1 ? '-'
-                    : Math.random() < 0.3 ? '+'
-                        : '*';
-
-        const problem = calculateProblem({ a, b, operator });
+        const problem = createRandomProblem();
         return problem;
     };
 
@@ -164,6 +175,8 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
         return response.formData?.answerRaw.value ?? null;
     };
 
+    commandsApi.showTitle(playerName, problem.question, { fadeInTimeSec: 0, stayTimeSec: 1, fadeOutTimeSec: 0 });
+    await delay(1000);
     const answerRaw = await sendProblemForm();
     const answer = parseInt(answerRaw + '');
 
