@@ -3,6 +3,8 @@ import { CommandsApiType } from "./tools/commandsApi";
 import { FormsApiType } from "./tools/formsApi";
 import { testRandomDistribution } from "./utils/random";
 
+const MAX = 12;
+
 type MathFormResult = {
     wasCorrect: boolean,
     answer: number,
@@ -15,6 +17,13 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
     // Improve distribution
     testRandomDistribution();
 
+    const getQueuedProblem = () => {
+        const playerState = mathState.playerStates.get(playerName);
+        if (!playerState || playerState.problemQueue.length <= 0) { return; }
+
+        return playerState.problemQueue.shift();
+    };
+
 
     const getWrongAnswerProblem = () => {
 
@@ -24,17 +33,27 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
         // Chance for new problem
         if (playerState.wrongAnswers.length < 3 && Math.random() > 0.5) { return; }
 
-        const randomProblem = playerState.wrongAnswers[Math.floor(playerState.wrongAnswers.length * Math.random())];
-        return randomProblem;
+        const r = playerState.wrongAnswers[Math.floor(playerState.wrongAnswers.length * Math.random())];
+
+        // Add to queue and run queue
+        if (r.b > -MAX) { playerState.problemQueue.push({ a: r.a, b: r.b - 1, correctAnswer: r.a * (r.b - 1) }); }
+        playerState.problemQueue.push({ a: r.a, b: r.b + 0, correctAnswer: r.a * (r.b + 0) });
+        if (r.b < MAX) { playerState.problemQueue.push({ a: r.a, b: r.b + 1, correctAnswer: r.a * (r.b + 1) }); }
+
+        // Run as queued problem
+        return getQueuedProblem();
     };
 
     const getProblem = () => {
 
+        const qProblem = getQueuedProblem();
+        if (qProblem) { return qProblem; }
+
         const wProblem = getWrongAnswerProblem();
         if (wProblem) { return wProblem; }
 
-        const a = Math.floor(Math.random() * 13);
-        const b = Math.floor(Math.random() * 13);
+        const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
+        const b = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
         const correctAnswer = a * b;
 
         return { a, b, correctAnswer };
@@ -184,6 +203,7 @@ const continueMathGame = (
         mathState.playerStates.set(x.playerName, {
             playerName: x.playerName,
             timeStart: Date.now(),
+            problemQueue: [],
             wrongAnswers: [],
             answerHistory: [],
         });
@@ -218,6 +238,7 @@ const mathState = {
     playerStates: new Map<string, {
         playerName: string,
         timeStart: number,
+        problemQueue: { a: number, b: number, correctAnswer: number }[],
         wrongAnswers: { a: number, b: number, correctAnswer: number }[],
         answerHistory: { time: number, wasCorrect: boolean, answer: number, answerRaw: unknown, problem: { a: number, b: number, correctAnswer: number } }[],
     }>(),
