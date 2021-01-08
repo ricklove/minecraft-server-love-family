@@ -10,5 +10,6 @@
     "noImplicitThis": true,
     "inlineSourceMap": true,
     "outDir": "out",
+    "esModuleInterop": true,
   }
 }

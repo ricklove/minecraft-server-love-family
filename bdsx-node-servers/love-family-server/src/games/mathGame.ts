@@ -2,13 +2,18 @@ import { Entity, NetworkIdentifier } from "bdsx";
 import { CommandsApiType } from "../tools/commandsApi";
 import { FormsApiType } from "../tools/formsApi";
 import { delay } from "../utils/delay";
+import { FileWriterServiceType } from "../utils/fileWriter";
 import { testRandomDistribution } from "../utils/random";
 import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
 
 const MAX = 12;
 const REVIEW_RATIO = 0.9;
 
-// TODO: Other Math Problems
+// TODO: 
+// Record to File
+// Decrease Review Problem Repeat Interval?
+// Other Math Problem Types:
+// Double digit addition/subtraction
 // Powers & Roots
 // Reduce Fractions
 // Prime Factors
@@ -64,13 +69,15 @@ const createRandomProblem = () => {
     return problem;
 };
 
-type MathFormResult = {
+type MathProblemAnswer = {
     wasCorrect: boolean,
     answer: number,
     answerRaw: string | null,
     problem: MathProblemType,
+    time: Date,
+    timeToAnswerMs: number,
 };
-const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<MathFormResult> => {
+const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<MathProblemAnswer> => {
     console.log('sendMathForm', { playerName });
 
     // Improve distribution
@@ -177,18 +184,36 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
 
     commandsApi.showTitle(playerName, problem.question, { fadeInTimeSec: 0, stayTimeSec: 1, fadeOutTimeSec: 0 });
     await delay(1000);
+
+    const timeSent = Date.now();
     const answerRaw = await sendProblemForm();
     const answer = parseInt(answerRaw + '');
+
+    const time = new Date();
+    const timeToAnswerMs = Date.now() - timeSent;
 
     return {
         wasCorrect: answer === problem.correctAnswer,
         answer,
         answerRaw,
         problem,
+        time,
+        timeToAnswerMs,
     };
 };
 
-const getPlayerScoreReport = (playerState: null | ReturnType<typeof mathState.playerStates.get>) => {
+const getRunningAverage = (playerState: null | PlayerState) => {
+    if (!playerState) {
+        return '';
+    }
+    const h = playerState.answerHistory;
+    const lastNItems = h.slice(h.length - 25, h.length);
+    const count = lastNItems.length;
+    const countCorrect = lastNItems.filter(x => x.wasCorrect).length;
+    return `runAve: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`;
+};
+
+const getPlayerScoreReport = (playerState: null | PlayerState) => {
     if (!playerState) {
         return;
     }
@@ -197,11 +222,11 @@ const getPlayerScoreReport = (playerState: null | ReturnType<typeof mathState.pl
         answeredCount: playerState?.answerHistory.length || 1,
         correctCount: playerState?.answerHistory.filter(x => x.wasCorrect).length || 1,
     };
-    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}%`;
+    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}% ${getRunningAverage(playerState)}`;
     return scoreReport;
 };
 
-const sendAnswerResponse = (commandsApi: CommandsApiType, result: MathFormResult, playerName: string) => {
+const sendAnswerResponse = (commandsApi: CommandsApiType, result: MathProblemAnswer, playerName: string) => {
     const playerState = mathState.playerStates.get(playerName);
     if (!playerState) {
         console.warn('playerState not found', { playerName });
@@ -240,7 +265,11 @@ const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: Comma
         return;
     }
 
-    playerState.answerHistory.push({ ...result, time: Date.now() });
+    playerState.answerHistory.push(result);
+
+    // Write to file
+    await playerState.writeAnswerToFile?.(result);
+
     sendAnswerResponse(commandsApi, result, player.playerName);
 
     // If Correct
@@ -254,7 +283,7 @@ const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: Comma
         console.log(`Right Answer`, {
             playerName: player.playerName,
             result,
-            wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.key}!=${x.answerRaw}`),
+            wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time} ${x.timeToAnswerMs} ${x.problem.key}!=${x.answerRaw}`),
             wrongAnswers: playerState.wrongAnswers,
             problemQueue: playerState.problemQueue,
         });
@@ -269,18 +298,23 @@ const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: Comma
     console.log(`Wrong Answer`, {
         playerName: player.playerName,
         result,
-        wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.key}!=${x.answerRaw}`),
+        wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time} ${x.timeToAnswerMs} ${x.problem.key} != ${x.answerRaw}`),
         wrongAnswers: playerState.wrongAnswers,
         problemQueue: playerState.problemQueue,
     });
 };
 
+const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => string) => {
+    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'mathProblemHistory.tsv');
+    return async (a: MathProblemAnswer) => await playerFileWriter.appendToFile(`${a.wasCorrect ? 'correct' : 'wrong'} \t${a.time} \t${a.timeToAnswerMs} \t${a.problem.key} \t!= ${a.answerRaw}\tRunAve=${getRunningAverage()}\n`);
+};
 
 const continueMathGame = (
     formsApi: FormsApiType, commandsApi: CommandsApiType, gameConsequences: GameConsequenceType,
     options: {
         players: GamePlayerInfo[],
-        intervalTimeMs: number
+        intervalTimeMs: number,
+        fileWriterService?: FileWriterServiceType,
     }
 ) => {
     console.log('continueMathGame', { players: options.players.map(x => x.playerName) });
@@ -290,13 +324,17 @@ const continueMathGame = (
     const newPlayers = options.players.filter(x => !mathState.playerStates.has(x.playerName));
     // const droppedPlayerNames = [...mathState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
     newPlayers.forEach(x => {
-        mathState.playerStates.set(x.playerName, {
+
+
+        const playerState: PlayerState = {
             playerName: x.playerName,
-            timeStart: Date.now(),
+            timeStart: new Date(),
             problemQueue: [],
             wrongAnswers: [],
             answerHistory: [],
-        });
+            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverage(playerState)) : undefined,
+        };
+        mathState.playerStates.set(x.playerName, playerState);
         commandsApi.sendMessage(x.playerName, `You are now playing the Math Game!!!`);
     });
 
@@ -323,16 +361,18 @@ const stopMathGame = () => {
     mathState.timeoutId = null;
 };
 
+type PlayerState = {
+    playerName: string,
+    timeStart: Date,
+    problemQueue: MathProblemType[],
+    wrongAnswers: MathProblemType[],
+    answerHistory: MathProblemAnswer[],
+    writeAnswerToFile?: (answer: MathProblemAnswer) => Promise<void>,
+};
 
 const mathState = {
     timeoutId: null as null | ReturnType<typeof setTimeout>,
-    playerStates: new Map<string, {
-        playerName: string,
-        timeStart: number,
-        problemQueue: MathProblemType[],
-        wrongAnswers: MathProblemType[],
-        answerHistory: { time: number, wasCorrect: boolean, answer: number, answerRaw: unknown, problem: MathProblemType }[],
-    }>(),
+    playerStates: new Map<string, PlayerState>(),
 };
 
 export const mathGame = {

@@ -1,3 +1,4 @@
+import path from 'path';
 import { startPacketLogger } from "./tools/packetLogger";
 import { command, chat, CANCEL, netevent, NetworkIdentifier, PacketId, createPacket, sendPacket } from 'bdsx';
 import { createCommandsApi } from "./tools/commandsApi";
@@ -8,6 +9,7 @@ import { connectionsApi } from "./tools/playerConnections";
 import { start } from "repl";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
+import { createFileWriterService } from "./utils/fileWriter";
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -80,12 +82,15 @@ command.net.on((ev) => {
     }
 });
 
+// console.log('process.execPath', process.execPath);
+const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '_data'));
 const gameConsequences = createGameConsequences(system);
 const startMathGame = () => {
     console.log('startMathGame');
     mathGame.startMathGame(formsApi, commandsApi, gameConsequences, {
         intervalTimeMs: 20 * 1000,
-        players: connectionsApi.getPlayerConnections()
+        players: connectionsApi.getPlayerConnections(),
+        fileWriterService,
     });
 };
 startMathGame();
