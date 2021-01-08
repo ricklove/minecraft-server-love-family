@@ -3,10 +3,11 @@ import { command, chat, CANCEL, netevent, NetworkIdentifier, PacketId, createPac
 import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
-import { mathGame } from "./mathGame";
+import { mathGame } from "./games/mathGame";
 import { connectionsApi } from "./tools/playerConnections";
 import { start } from "repl";
 import { testRandomDistribution } from "./utils/random";
+import { createGameConsequences } from "./games/gameConsequences";
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -65,7 +66,7 @@ command.net.on((ev) => {
 
     if (ev.command.toLowerCase().startsWith('/math test')) {
         (async () => {
-            await mathGame.sendMathFormWithResult(formsApi, commandsApi, system, ev.networkIdentifier, playerName, entity);
+            await mathGame.test_sendMathFormWithResult(formsApi, commandsApi, { networkIdentifier: ev.networkIdentifier, playerName, entity }, gameConsequences);
         })();
         return CANCEL;
     }
@@ -79,9 +80,10 @@ command.net.on((ev) => {
     }
 });
 
+const gameConsequences = createGameConsequences(system);
 const startMathGame = () => {
     console.log('startMathGame');
-    mathGame.startMathGame(formsApi, commandsApi, system, {
+    mathGame.startMathGame(formsApi, commandsApi, gameConsequences, {
         intervalTimeMs: 20 * 1000,
         players: connectionsApi.getPlayerConnections()
     });

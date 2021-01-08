@@ -1,15 +1,55 @@
 import { Entity, NetworkIdentifier } from "bdsx";
-import { CommandsApiType } from "./tools/commandsApi";
-import { FormsApiType } from "./tools/formsApi";
-import { testRandomDistribution } from "./utils/random";
+import { CommandsApiType } from "../tools/commandsApi";
+import { FormsApiType } from "../tools/formsApi";
+import { testRandomDistribution } from "../utils/random";
+import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
 
 const MAX = 12;
+const REVIEW_RATIO = 0.9;
+
+/** For division, question: product / a = b */
+type MathProblemType = {
+    key: string,
+    question: string,
+    a: number,
+    b: number,
+    operator: '*' | '+' | '-' | '/';
+    correctAnswer: number
+};
+
+const calculateProblem = ({ a, b, operator }: Pick<MathProblemType, 'operator' | 'a' | 'b'>): MathProblemType => {
+    const calculateAnswer = ({ a, b, operator }: Pick<MathProblemType, 'operator' | 'a' | 'b'>): number => {
+        switch (operator) {
+            case '*': return a * b;
+            case '/': return a / b;
+            case '-': return a - b;
+            case '+': return a + b;
+            default: return 0;
+        }
+    };
+
+    if (operator === '/') {
+        // product / a = b
+
+        if (a === 0) { a = 1; }
+        const product = calculateAnswer({ a, b, operator: '*' });
+
+        const question = `What is ${product} ${operator} ${a}?`;
+        const correctAnswer = calculateAnswer({ a: product, b: a, operator });
+
+        return { key: question, question, a, b, operator, correctAnswer };
+    }
+
+    const question = `What is ${a} ${operator} ${b}?`;
+    const correctAnswer = calculateAnswer({ a, b, operator });
+    return { key: question, question, a, b, operator, correctAnswer };
+};
 
 type MathFormResult = {
     wasCorrect: boolean,
     answer: number,
     answerRaw: string | null,
-    problem: { a: number, b: number, correctAnswer: number },
+    problem: MathProblemType,
 };
 const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<MathFormResult> => {
     console.log('sendMathForm', { playerName });
@@ -31,20 +71,36 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
         if (!playerState || playerState.wrongAnswers.length <= 0) { return; }
 
         // Chance for new problem
-        if (playerState.wrongAnswers.length < 3 && Math.random() > 0.5) { return; }
+        if (playerState.wrongAnswers.length < 3 && Math.random() > REVIEW_RATIO) { return; }
 
-        const r = playerState.wrongAnswers[Math.floor(playerState.wrongAnswers.length * Math.random())];
+        const w = playerState.wrongAnswers;
+        const wWithCounts = new Map(w.map(x => [`${x.a}*${x.b}`, x]));
+        const recent = w.slice(w.length - 5, w.length);
+        const review = recent[Math.floor(recent.length * Math.random())];
+        if (!review) { return; }
+
 
         // Add to queue and run queue
-        if (r.b > -MAX) { playerState.problemQueue.push({ a: r.a, b: r.b - 1, correctAnswer: r.a * (r.b - 1) }); }
-        playerState.problemQueue.push({ a: r.a, b: r.b + 0, correctAnswer: r.a * (r.b + 0) });
-        if (r.b < MAX) { playerState.problemQueue.push({ a: r.a, b: r.b + 1, correctAnswer: r.a * (r.b + 1) }); }
+        const r = review;
+        if (r.operator === '/') {
+            playerState.problemQueue.push(calculateProblem({ a: r.a, b: r.b, operator: '*' }));
+            playerState.problemQueue.push(calculateProblem({ b: r.a, a: r.b, operator: '*' }));
+            playerState.problemQueue.push(calculateProblem({ a: r.a, b: r.b, operator: '/' }));
+            playerState.problemQueue.push(calculateProblem({ b: r.a, a: r.b, operator: '/' }));
+        } else {
+            for (let i = r.b - 2; i <= r.b; i++) {
+                if (i < -MAX) { continue; }
+                if (i > MAX) { continue; }
+
+                playerState.problemQueue.push(calculateProblem({ a: r.a, b: i, operator: r.operator }));
+            }
+        }
 
         // Run as queued problem
         return getQueuedProblem();
     };
 
-    const getProblem = () => {
+    const getProblem = (): MathProblemType => {
 
         const qProblem = getQueuedProblem();
         if (qProblem) { return qProblem; }
@@ -54,20 +110,32 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
 
         const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
         const b = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX + 1));
-        const correctAnswer = a * b;
+        const operator =
+            Math.random() < 0.1 ? '/'
+                : Math.random() < 0.1 ? '-'
+                    : Math.random() < 0.3 ? '+'
+                        : '*';
 
-        return { a, b, correctAnswer };
+        const problem = calculateProblem({ a, b, operator });
+        return problem;
     };
 
-    const { a, b, correctAnswer } = getProblem();
+    const problem = getProblem();
 
     const sendProblemForm = async () => {
         const formType = 'choices';
         if (formType === 'choices') {
 
-            const wrongChoices = new Set([...new Array(7)].map(() => Math.floor(a + (3 - Math.random() * 5)) * Math.floor(b + ((3 - Math.random() * 5)))));
-            const choices = [correctAnswer, ...[...wrongChoices.values()]
-                .filter(x => x !== correctAnswer)
+            const { a, b, operator } = problem;
+            const wrongChoices = new Set([...new Array(7)].map(() => Math.floor(calculateProblem({
+                a: Math.floor(a + (3 - Math.random() * 5)),
+                b: Math.floor(b + (3 - Math.random() * 5)),
+                operator,
+            }).correctAnswer)).filter(x => isFinite(x))
+            );
+
+            const choices = [problem.correctAnswer, ...[...wrongChoices.values()]
+                .filter(x => x !== problem.correctAnswer)
                 .map(x => ({ x, rand: Math.random() })).sort((a, b) => a.rand - b.rand).map(x => x.x)
                 .slice(0, 3)];
             const choicesRandomized = choices
@@ -78,7 +146,7 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
                 networkIdentifier,
                 playerName,
                 title: `Multiplication`,
-                content: `What is ${a} * ${b}`,
+                content: problem.question,
                 buttons,
             });
             return response.formData.buttonClickedName;
@@ -89,7 +157,7 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
             playerName,
             title: `Multiplication`,
             content: {
-                questionLabel: { type: 'label', text: `What is ${a} * ${b}` },
+                questionLabel: { type: 'label', text: problem.question },
                 answerRaw: { type: 'input', text: `Answer` },
             },
         });
@@ -98,10 +166,9 @@ const sendMathForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType
 
     const answerRaw = await sendProblemForm();
     const answer = parseInt(answerRaw + '');
-    const problem = { a, b, correctAnswer };
 
     return {
-        wasCorrect: answer === correctAnswer,
+        wasCorrect: answer === problem.correctAnswer,
         answer,
         answerRaw,
         problem,
@@ -124,10 +191,9 @@ const getPlayerScoreReport = (playerState: null | ReturnType<typeof mathState.pl
 const sendAnswerResponse = (commandsApi: CommandsApiType, result: MathFormResult, playerName: string) => {
     const playerState = mathState.playerStates.get(playerName);
     if (!playerState) {
+        console.warn('playerState not found', { playerName });
         return;
     }
-
-    playerState.answerHistory.push({ ...result, time: Date.now() });
 
     const { wasCorrect, answerRaw, answer, problem } = result;
     const { a, b, correctAnswer } = problem;
@@ -152,44 +218,55 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: MathFormResult
     return;
 };
 
-const sendMathFormWithConsequence = async (formsApi: FormsApiType, commandsApi: CommandsApiType, system: IVanillaServerSystem, networkIdentifier: NetworkIdentifier, playerName: string, playerEntity: IEntity) => {
-    const result = await mathGame.sendMathForm(formsApi, commandsApi, networkIdentifier, playerName);
+const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: CommandsApiType, player: GamePlayerInfo, gameConsequences: GameConsequenceType) => {
+    const result = await sendMathForm(formsApi, commandsApi, player.networkIdentifier, player.playerName);
 
-    const playerState = mathState.playerStates.get(playerName);
+    const playerState = mathState.playerStates.get(player.playerName);
     if (!playerState) {
+        console.warn('playerState not found', { playerName: player.playerName });
         return;
     }
 
-    sendAnswerResponse(commandsApi, result, playerName);
+    playerState.answerHistory.push({ ...result, time: Date.now() });
+    sendAnswerResponse(commandsApi, result, player.playerName);
 
+    // If Correct
     if (result.wasCorrect) {
         // Remove correct answers
-        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => !(x.a === result.problem.a && x.b === result.problem.b));
+        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => x.key !== result.problem.key);
+        playerState.problemQueue = playerState.problemQueue.filter(x => x.key !== result.problem.key);
+
+        gameConsequences.onCorrect(player);
+
+        console.log(`Right Answer`, {
+            playerName: player.playerName,
+            result,
+            wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.key}!=${x.answerRaw}`),
+            wrongAnswers: playerState.wrongAnswers,
+            problemQueue: playerState.problemQueue,
+        });
+
         return;
     }
 
-    console.log(`Wrong Answer`, {
-        playerName,
-        result,
-        wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.a}*${x.problem.b}!=${x.answerRaw}`)
-    });
-
+    // If Wrong
     playerState.wrongAnswers.push(result.problem);
+    gameConsequences.onWrong(player);
 
-    const pos = system.getComponent(playerEntity, MinecraftComponent.Position);
-    if (!pos) { return; }
-
-    system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-    system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
-    system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z + 1}`, () => { });
-    system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
+    console.log(`Wrong Answer`, {
+        playerName: player.playerName,
+        result,
+        wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time - playerState.timeStart} ${x.problem.key}!=${x.answerRaw}`),
+        wrongAnswers: playerState.wrongAnswers,
+        problemQueue: playerState.problemQueue,
+    });
 };
 
-type PlayerInfo = { networkIdentifier: NetworkIdentifier, playerName: string, entity: IEntity };
+
 const continueMathGame = (
-    formsApi: FormsApiType, commandsApi: CommandsApiType, system: IVanillaServerSystem,
+    formsApi: FormsApiType, commandsApi: CommandsApiType, gameConsequences: GameConsequenceType,
     options: {
-        players: PlayerInfo[],
+        players: GamePlayerInfo[],
         intervalTimeMs: number
     }
 ) => {
@@ -212,7 +289,7 @@ const continueMathGame = (
 
     mathState.timeoutId = setTimeout(() => {
         options.players.forEach(p => {
-            sendMathFormWithConsequence(formsApi, commandsApi, system, p.networkIdentifier, p.playerName, p.entity);
+            sendMathFormWithResult(formsApi, commandsApi, p, gameConsequences);
         });
 
         // Report
@@ -221,7 +298,7 @@ const continueMathGame = (
         commandsApi.sendMessage('@a', report);
 
         // Loop
-        continueMathGame(formsApi, commandsApi, system, options);
+        continueMathGame(formsApi, commandsApi, gameConsequences, options);
     }, options.intervalTimeMs);
 };
 
@@ -233,20 +310,21 @@ const stopMathGame = () => {
     mathState.timeoutId = null;
 };
 
+
 const mathState = {
     timeoutId: null as null | ReturnType<typeof setTimeout>,
     playerStates: new Map<string, {
         playerName: string,
         timeStart: number,
-        problemQueue: { a: number, b: number, correctAnswer: number }[],
-        wrongAnswers: { a: number, b: number, correctAnswer: number }[],
-        answerHistory: { time: number, wasCorrect: boolean, answer: number, answerRaw: unknown, problem: { a: number, b: number, correctAnswer: number } }[],
+        problemQueue: MathProblemType[],
+        wrongAnswers: MathProblemType[],
+        answerHistory: { time: number, wasCorrect: boolean, answer: number, answerRaw: unknown, problem: MathProblemType }[],
     }>(),
 };
 
 export const mathGame = {
-    sendMathForm,
-    sendMathFormWithResult: sendMathFormWithConsequence,
+    //  sendMathForm,
+    test_sendMathFormWithResult: sendMathFormWithResult,
     startMathGame: continueMathGame,
     stopMathGame,
     isRunning: () => !!mathState.timeoutId,
