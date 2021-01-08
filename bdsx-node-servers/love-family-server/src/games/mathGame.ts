@@ -210,6 +210,8 @@ const getRunningAverage = (playerState: null | PlayerState) => {
     const lastNItems = h.slice(h.length - 25, h.length);
     const count = lastNItems.length;
     const countCorrect = lastNItems.filter(x => x.wasCorrect).length;
+    if (count <= 0) { return ''; }
+
     return `runAve: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`;
 };
 
@@ -306,7 +308,8 @@ const sendMathFormWithResult = async (formsApi: FormsApiType, commandsApi: Comma
 
 const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => string) => {
     const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'mathProblemHistory.tsv');
-    return async (a: MathProblemAnswer) => await playerFileWriter.appendToFile(`${a.wasCorrect ? 'correct' : 'wrong'} \t${a.time} \t${a.timeToAnswerMs} \t${a.problem.key} \t!= ${a.answerRaw}\tRunAve=${getRunningAverage()}\n`);
+    return async (a: MathProblemAnswer) => await playerFileWriter.appendToFile(
+        `${a.wasCorrect ? 'correct' : 'wrong'} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${getRunningAverage()} \t${a.time}\n`);
 };
 
 const continueMathGame = (
