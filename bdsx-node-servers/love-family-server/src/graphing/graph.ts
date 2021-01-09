@@ -38,11 +38,11 @@ export const graphBars = (commands: CommandService, getBar: (x: number) => { hei
 
     for (let x = 0; x < w; x++) {
         const bar = getBar(x);
-        const yVal = bar.height;
+        const yVal = Math.min(h - 1, bar.height);
         const { aboveBlockName, belowBlockName, atBlockName } = bar;
 
-        commands.executeCommand(`/fill   ${o.x + x} ${o.y + yVal + 1} ${o.z}   ${o.x + x} ${o.y + h - 1} ${o.z}   ${aboveBlockName ?? 'air'}`);
-        commands.executeCommand(`/fill   ${o.x + x} ${o.y + 0}        ${o.z}   ${o.x + x} ${o.y + yVal}  ${o.z}   ${belowBlockName ?? blockName}`);
+        commands.executeCommand(`/fill   ${o.x + x} ${o.y + yVal} ${o.z}   ${o.x + x} ${o.y + h - 1} ${o.z}   ${aboveBlockName ?? 'air'}`);
+        commands.executeCommand(`/fill   ${o.x + x} ${o.y + 0}    ${o.z}   ${o.x + x} ${o.y + yVal}  ${o.z}   ${belowBlockName ?? blockName}`);
         if (atBlockName) {
             commands.executeCommand(`/setblock   ${o.x + x} ${o.y + yVal} ${o.z}   ${atBlockName}`);
         }

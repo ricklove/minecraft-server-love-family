@@ -70,6 +70,7 @@ export const runBubbleSort2 = (commands: CommandService) => {
             graphBars(commands, x => ({
                 height: bubbleSort.state.items[x],
                 aboveBlockName: 'air',
+                //aboveBlockName: 'chiseled_polished_blackstone',
                 belowBlockName: x === bubbleSort.state.cursor ? 'gold_block'
                     : x + 1 === bubbleSort.state.cursor ? 'iron_block'
                         : x >= bubbleSort.state.solvedAfterIndex ? 'diamond_block'
