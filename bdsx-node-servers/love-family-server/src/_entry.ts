@@ -10,10 +10,11 @@ import { start } from "repl";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
 import { createFileWriterService } from "./utils/fileWriter";
-import { checkerBoardBedrock, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical, testFillSinCurve_verticalThin } from './testing/performanceTests';
+import { testFillcheckerBoard, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical, testFillSinCurve_verticalThin } from './testing/performanceTests';
 import { graphSinCurve } from './graphing/graph';
 import { runBubbleSort } from './sorting/bubbleSort';
 import { runBubbleSort2 } from './sorting/bubbleSort2';
+import { calculateMapPosition } from './graphing/map';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -87,14 +88,14 @@ command.net.on((ev) => {
 
     if (ev.command.toLowerCase().startsWith('/test fill chunks')) {
 
-        const commadExample = `/test fill chunks [chunkWidth] [blockName]`;
+        const commandExample = `/test fill chunks [chunkWidth] [blockName]`;
 
         const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
         const chunkWidth = parseInt(parts[3]);
         const blockName = parts[4];
 
         if (!chunkWidth || !blockName) {
-            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}' or blockName '${blockName}'. Example: ${commadExample}`);
+            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}' or blockName '${blockName}'. Example: ${commandExample}`);
             return CANCEL;
         }
 
@@ -104,30 +105,30 @@ command.net.on((ev) => {
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/test fill checkerboard')) {
-        const commadExample = `/test fill checkerboard [chunkWidth]`;
+        const commandExample = `/test fill checkerboard [chunkWidth]`;
 
         const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
         const chunkWidth = parseInt(parts[3]);
 
         if (!chunkWidth) {
-            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}'. Example: ${commadExample}`);
+            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}'. Example: ${commandExample}`);
             return CANCEL;
         }
 
-        checkerBoardBedrock({
+        testFillcheckerBoard({
             executeCommand: x => system.executeCommand(x, () => { }),
         }, chunkWidth);
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/test fill animate')) {
-        const commadExample = `/test fill checkerboard [chunkWidth] [blockName]`;
+        const commandExample = `/test fill checkerboard [chunkWidth] [blockName]`;
 
         const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
         const chunkWidth = parseInt(parts[3]);
         const blockName = parts[4];
 
         if (!chunkWidth || !blockName) {
-            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}' or blockName '${blockName}'. Example: ${commadExample}`);
+            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}' or blockName '${blockName}'. Example: ${commandExample}`);
             return CANCEL;
         }
 
@@ -139,7 +140,8 @@ command.net.on((ev) => {
                 return;
             }
 
-            testFillSinCurve_verticalThin({
+            //testFillSinCurve_verticalThin({
+            testFillSinCurve({
                 executeCommand: x => system.executeCommand(x, () => { }),
             }, chunkWidth, i / 10 * 2 * Math.PI, blockName);
             i++;
@@ -149,14 +151,40 @@ command.net.on((ev) => {
 
         return CANCEL;
     }
+
+    if (ev.command.toLowerCase().startsWith('/test map fill')) {
+        const commandExample = `/test map fill [blockName]`;
+
+        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
+        const blockName = parts[3];
+
+        if (!blockName) {
+            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commandExample}`);
+            return CANCEL;
+        }
+
+        const playerPosition = system.getComponent(entity, MinecraftComponent.Position);
+        if (!playerPosition) {
+            console.warn(`missing playerPosition`);
+            return CANCEL;
+        }
+
+        const pos = playerPosition.data;
+        const mapPosition = calculateMapPosition({ ...pos, y: pos.y - 1 });
+        const { topLeft: tl, bottomRight: br } = mapPosition;
+
+        system.executeCommand(`/fill ${tl.x} ${tl.y} ${tl.z} ${br.x} ${br.y} ${br.z} ${blockName}`, () => { });
+        return CANCEL;
+    }
+
     if (ev.command.toLowerCase().startsWith('/test graph')) {
-        const commadExample = `/test graph [chunkWidth]`;
+        const commandExample = `/test graph [chunkWidth]`;
 
         const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
         const blockName = parts[2];
 
         if (!blockName) {
-            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commadExample}`);
+            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commandExample}`);
             return CANCEL;
         }
 
