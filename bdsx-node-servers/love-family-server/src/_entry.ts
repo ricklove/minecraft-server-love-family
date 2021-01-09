@@ -10,7 +10,7 @@ import { start } from "repl";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
 import { createFileWriterService } from "./utils/fileWriter";
-import { checkerBoardBedrock, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical } from './testing/performanceTests';
+import { checkerBoardBedrock, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical, testFillSinCurve_verticalThin } from './testing/performanceTests';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -117,13 +117,14 @@ command.net.on((ev) => {
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/test fill animate')) {
-        const commadExample = `/test fill checkerboard [chunkWidth]`;
+        const commadExample = `/test fill checkerboard [chunkWidth] [blockName]`;
 
         const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
         const chunkWidth = parseInt(parts[3]);
+        const blockName = parts[4];
 
-        if (!chunkWidth) {
-            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}'. Example: ${commadExample}`);
+        if (!chunkWidth || !blockName) {
+            commandsApi.sendMessage(playerName, `Missing width '${chunkWidth}' or blockName '${blockName}'. Example: ${commadExample}`);
             return CANCEL;
         }
 
@@ -135,9 +136,9 @@ command.net.on((ev) => {
                 return;
             }
 
-            testFillSinCurve_vertical({
+            testFillSinCurve_verticalThin({
                 executeCommand: x => system.executeCommand(x, () => { }),
-            }, chunkWidth, i / 10 * 2 * Math.PI);
+            }, chunkWidth, i / 10 * 2 * Math.PI, blockName);
             i++;
         }, 250);
         return CANCEL;

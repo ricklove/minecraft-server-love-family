@@ -39,17 +39,33 @@ export const testFillSinCurve = (commands: CommandService, chunkWidth: number, o
     commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
-        const z = Math.floor((Math.sin(x / (16 * chunkWidth) * 2 * Math.PI + offset) * 0.5 + 0.5) * 16 * chunkWidth);
+        const z = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * 0.5 + 0.5) * 16 * chunkWidth);
         commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${0} ${1024 + z} ${'dirt'}`)
     }
 };
 
-export const testFillSinCurve_vertical = (commands: CommandService, chunkWidth: number, offset: number) => {
+export const testFillSinCurve_vertical = (commands: CommandService, chunkWidth: number, offset: number, blockName: string) => {
 
-    commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
+    //commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
+
+    const amplitudeRatio = 2 / (16 * chunkWidth);
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
-        const h = Math.floor((Math.sin(x / (16 * chunkWidth) * 2 * Math.PI + offset) * 0.5 + 0.5) * 16 * chunkWidth);
-        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${h} ${1024 + 16 * chunkWidth - 1} ${'dirt'}`)
+        const h = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * amplitudeRatio + (1 - amplitudeRatio)) * 16 * chunkWidth);
+        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${16 * chunkWidth - 1} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
+        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${h} ${1024 + 16 * chunkWidth - 1} ${blockName}`)
+    }
+};
+
+export const testFillSinCurve_verticalThin = (commands: CommandService, chunkWidth: number, offset: number, blockName: string) => {
+
+    //commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
+
+    const amplitudeRatio = 2 / (16 * chunkWidth);
+
+    for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
+        const h = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * amplitudeRatio + (1 - amplitudeRatio)) * 16 * chunkWidth);
+        commands.executeCommand(`/fill ${x} ${h} ${1024} ${x} ${16 * chunkWidth - 1} ${1024} ${'air'}`)
+        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${h} ${1024} ${blockName}`)
     }
 };
