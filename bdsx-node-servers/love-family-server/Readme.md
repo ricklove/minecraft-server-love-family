@@ -61,6 +61,61 @@ Alternatively, edit the world bdt table and set these manually.
     - [ ] Type the word (show the word for 3 seconds, then type)
 
 
+# Companion App
+
+Host a web tool (react) to interact with the running game, can run side by side on pc or on 2nd device.
+
+## Companion App Study
+
+- See progress reports
+- Select Subjects
+    - Math problems
+        - Problem Types
+        - Difficulty, etc.
+- Create Subjects
+    - Q/A format 
+        - multiple choice
+        - type short answer
+    - Languange Learning
+        - Languange A & Language B
+        - either direction
+        - Text to speech support (for some languages)
+        - Choose translation
+        - Listen and choose text
+        - Partial Input Support (word by word, letter by letter, etc.)
+    - Definitions
+        - Choose word 
+        - type word
+    - Memorize statements 
+        - auto fill in blank
+        - manual fill in blank (markdown underline focus words)
+        - every word fill in blank (first letter hints?)
+        - multiple choice
+        - type short answer
+        - context review on wrong (go back 2 statements and review)
+
+- ? Answer Questions on 2nd device with better answering modes
+
+## Companion App Chemistry
+
+- Run a chemistry lesson that uses the minecraft chemistry tools
+
+## Companion App Game Scripting
+
+- Runtime typescript editing
+- Runtime typescript blocky editor
+
+## Companion App Game Interactions
+
+- Use Special Effects
+- Quick Commands
+- Teleportation Helper
+- Study Coins
+    - Buy one time use in game items
+    - Buy special skins, blocks, etc.
+    - Buy in-game artwork (using the filled_map)
+- Draw in-game artwork (using the filled_map with live editing)
+
 # Visualizations
 
 ## Using Maps
