@@ -1,6 +1,3 @@
-import { command } from "bdsx";
-import { std$_Allocate$16 } from "bdsx/native";
-
 type CommandService = {
     executeCommand: (command: string) => void
 };
@@ -61,7 +58,7 @@ export const testFillSinCurve_verticalThin = (commands: CommandService, chunkWid
 
     //commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
 
-    const amplitudeRatio = 2 / (16 * chunkWidth);
+    const amplitudeRatio = 8 / (16 * chunkWidth);
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
         const h = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * amplitudeRatio + (1 - amplitudeRatio)) * 16 * chunkWidth);

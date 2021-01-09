@@ -11,6 +11,8 @@ import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
 import { createFileWriterService } from "./utils/fileWriter";
 import { checkerBoardBedrock, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical, testFillSinCurve_verticalThin } from './testing/performanceTests';
+import { graphSinCurve } from './graphing/graph';
+import { runBubbleSort } from './sorting/bubbleSort';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -141,6 +143,38 @@ command.net.on((ev) => {
             }, chunkWidth, i / 10 * 2 * Math.PI, blockName);
             i++;
         }, 250);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/test graph')) {
+        const commadExample = `/test graph [chunkWidth]`;
+
+        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
+        const blockName = parts[2];
+
+        if (!blockName) {
+            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commadExample}`);
+            return CANCEL;
+        }
+
+        graphSinCurve({
+            executeCommand: x => system.executeCommand(x, () => { }),
+        }, blockName);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/test sort')) {
+        const commadExample = `/test sort [chunkWidth]`;
+
+        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
+        const blockName = parts[2];
+
+        if (!blockName) {
+            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commadExample}`);
+            return CANCEL;
+        }
+
+        runBubbleSort({
+            executeCommand: x => system.executeCommand(x, () => { }),
+        }, blockName);
         return CANCEL;
     }
 });
