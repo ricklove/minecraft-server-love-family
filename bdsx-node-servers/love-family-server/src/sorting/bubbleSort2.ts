@@ -9,19 +9,22 @@ const createBubbleSorter = (count: number, max: number) => {
     const state = {
         items: [...new Array(count)].map(() => Math.floor(Math.random() * max)),
         cursor: 0,
+        solvedAfterIndex: count,
         isDone: false,
         didSwap: true,
     };
 
     const iterate = () => {
         if (state.isDone) { return { isDone: true }; }
-        if (state.cursor + 1 > state.items.length - 1) {
+        if (state.cursor + 1 >= state.solvedAfterIndex) {
             if (!state.didSwap) {
+                state.solvedAfterIndex = 0;
                 state.isDone = true;
                 return { isDone: true };
             }
             state.didSwap = false;
             state.cursor = 0;
+            state.solvedAfterIndex--;
         }
 
         const a = state.items[state.cursor];
@@ -45,7 +48,7 @@ const createBubbleSorter = (count: number, max: number) => {
     };
 };
 
-export const runBubbleSort = (commands: CommandService) => {
+export const runBubbleSort2 = (commands: CommandService) => {
 
     const size = 64;
     const bubbleSort = createBubbleSorter(size, size);
@@ -62,19 +65,20 @@ export const runBubbleSort = (commands: CommandService) => {
             }
 
             const result = bubbleSort.iterate();
-            // console.log('runBubbleSort iterate', { bubbleSort });
+            // console.log('runBubbleSort2 iterate', { bubbleSort });
 
             graphBars(commands, x => ({
                 height: bubbleSort.state.items[x],
                 aboveBlockName: 'air',
                 belowBlockName: x === bubbleSort.state.cursor ? 'gold_block'
                     : x + 1 === bubbleSort.state.cursor ? 'iron_block'
-                        : 'dirt',
+                        : x >= bubbleSort.state.solvedAfterIndex ? 'diamond_block'
+                            : 'dirt',
             }), {
                 origin: { x: 1024, y: 32, z: 1024 },
                 width: size,
                 height: size,
-                blockName: 'dirt'
+                blockName: 'dirt',
             });
 
             if (result?.isDone) {

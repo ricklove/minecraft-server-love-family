@@ -13,6 +13,7 @@ import { createFileWriterService } from "./utils/fileWriter";
 import { checkerBoardBedrock, performanceTestFill, testFillSinCurve, testFillSinCurve_vertical, testFillSinCurve_verticalThin } from './testing/performanceTests';
 import { graphSinCurve } from './graphing/graph';
 import { runBubbleSort } from './sorting/bubbleSort';
+import { runBubbleSort2 } from './sorting/bubbleSort2';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -130,9 +131,9 @@ command.net.on((ev) => {
             return CANCEL;
         }
 
+
         let i = 0;
-        clearInterval(animateIntervalId);
-        animateIntervalId = setInterval(() => {
+        const animateIntervalId = setInterval(() => {
             if (i > 100) {
                 clearInterval(animateIntervalId);
                 return;
@@ -143,6 +144,9 @@ command.net.on((ev) => {
             }, chunkWidth, i / 10 * 2 * Math.PI, blockName);
             i++;
         }, 250);
+
+        setActiveAnimation({ stop: () => clearInterval(animateIntervalId) });
+
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/test graph')) {
@@ -161,26 +165,41 @@ command.net.on((ev) => {
         }, blockName);
         return CANCEL;
     }
-    if (ev.command.toLowerCase().startsWith('/test sort')) {
-        const commadExample = `/test sort [chunkWidth]`;
-
-        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
-        const blockName = parts[2];
-
-        if (!blockName) {
-            commandsApi.sendMessage(playerName, `Missing blockName '${blockName}'. Example: ${commadExample}`);
-            return CANCEL;
-        }
-
-        runBubbleSort({
+    if (ev.command.toLowerCase().startsWith('/test sort bubble1')) {
+        const animation = runBubbleSort({
             executeCommand: x => system.executeCommand(x, () => { }),
-        }, blockName);
+        });
+        setActiveAnimation(animation);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/test sort bubble2')) {
+        const animation = runBubbleSort2({
+            executeCommand: x => system.executeCommand(x, () => { }),
+        });
+        setActiveAnimation(animation);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/test stop')) {
+        stopActiveAnimation();
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/test continue')) {
+        continueActiveAnimation();
         return CANCEL;
     }
 });
 
-let animateIntervalId = setInterval(() => { }, 1000);
-clearInterval(animateIntervalId);
+let activeAnimation = null as null | ({ stop: () => void, continue?: () => void });
+const setActiveAnimation = (animation: { stop: () => void, continue?: () => void }) => {
+    stopActiveAnimation();
+    activeAnimation = animation;
+};
+const stopActiveAnimation = () => {
+    activeAnimation?.stop();
+};
+const continueActiveAnimation = () => {
+    activeAnimation?.continue?.();
+};
 
 // console.log('process.execPath', process.execPath);
 const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '_data'));
@@ -206,8 +225,11 @@ connectionsApi.onPlayersChange(({ action }) => {
 });
 
 command.hook.on((command) => {
-    // Make sure math game is shutdown
     if (command === '/stop') {
+        // Stop everything
+        stopActiveAnimation();
+
+        // Make sure math game is shutdown
         mathGame.stopMathGame();
     }
 });
