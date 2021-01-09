@@ -59,3 +59,21 @@ Alternatively, edit the world bdt table and set these manually.
     - [ ] Multiple Choice (Choose the correcly spelled word)
     - [ ] Multiple Choice Type (Use buttons to spell the word one letter at a time)
     - [ ] Type the word (show the word for 3 seconds, then type)
+
+
+# Visualizations
+
+## Sorting
+
+https://en.wikipedia.org/wiki/Sorting_algorithm
+https://www.youtube.com/watch?v=8MsTNqK3o_w
+
+- [x] Bubble Sort
+- [x] Bubble Sort Optimized
+- [ ] Insertion Sort
+- [ ] Heap Sort
+- [ ] Merge Sort: https://www.youtube.com/watch?v=8MsTNqK3o_w&t=953s
+- [ ] Tim sort
+- [ ] Stable Quick Sort: https://www.youtube.com/watch?v=8MsTNqK3o_w&t=424s
+- [ ] Heap Sort: 
+- [ ] Block Sort: https://www.youtube.com/watch?v=8MsTNqK3o_w&t=2377s
