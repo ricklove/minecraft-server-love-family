@@ -144,16 +144,22 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (!playerState) {
         return '';
     }
+
     const RUN_COUNT = 25;
-    const h = playerState.answerHistory;
+
+    const allHistory = playerState.answerHistory;
+    const lastSubjectKey = allHistory[allHistory.length - 1].problem.subjectKey;
+
+    const h = allHistory.filter(x => x.problem.subjectKey === lastSubjectKey);
     const lastNItems = h.length <= RUN_COUNT ? h : h.slice(h.length - RUN_COUNT, h.length);
     const count = lastNItems.length;
     const countCorrect = lastNItems.filter(x => x.wasCorrect).length;
     const totalTimeMs = lastNItems.map(x => x.timeToAnswerMs).reduce((out, x) => { out += x; return out; }, 0);
     const aveTimeMs = totalTimeMs / count;
+
     if (count <= 0) { return ''; }
 
-    return `runAve: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`;
+    return `runAve ${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`;
 };
 
 const getPlayerScoreReport = (playerState: null | PlayerState) => {
