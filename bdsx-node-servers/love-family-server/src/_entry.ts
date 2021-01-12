@@ -6,7 +6,6 @@ import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
 import { mathGame } from "./games/mathGame";
 import { connectionsApi } from "./tools/playerConnections";
-import { start } from "repl";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
 import { createFileWriterService } from "./utils/fileWriter";
@@ -177,6 +176,53 @@ command.net.on((ev) => {
         return CANCEL;
     }
 
+    if (ev.command.toLowerCase().startsWith('/test map animate')) {
+        const commandExample = `/test map animate [frameCount]`;
+
+        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
+        const frameCount = parseInt(parts[3]) ?? 10;
+
+        const playerPosition = system.getComponent(entity, MinecraftComponent.Position);
+        if (!playerPosition) {
+            console.warn(`missing playerPosition`);
+            return CANCEL;
+        }
+
+        const pos = playerPosition.data;
+        const mapPosition = calculateMapPosition({ ...pos, y: pos.y - 1 });
+        const { topLeft: tl, bottomRight: br } = mapPosition;
+
+        let i = 0;
+        const animateIntervalId = setInterval(() => {
+            if (i >= frameCount) {
+                clearInterval(animateIntervalId);
+                return;
+            }
+
+            system.executeCommand(`/fill ${tl.x} ${tl.y} ${tl.z} ${br.x} ${br.y} ${br.z} ${'glass'}`, () => { });
+
+            for (let x = tl.x; x <= br.x; x++) {
+                for (let z = tl.z; z <= br.z; z++) {
+                    const p = { x, y: tl.y, z };
+
+                    if ((x + z + i) % 1 !== 0) { continue; }
+
+                    const blockName = (x + z + i) % 3 == 0 ? 'snow'
+                        : (x + z + i) % 3 == 1 ? 'gold_block'
+                            : 'dirt';
+                    system.executeCommand(`/setblock ${p.x} ${p.y} ${p.z} ${blockName}`, () => { });
+                }
+            }
+
+            i++;
+        }, 250);
+
+        setActiveAnimation({ stop: () => clearInterval(animateIntervalId) });
+
+        // system.executeCommand(`/fill ${tl.x} ${tl.y} ${tl.z} ${br.x} ${br.y} ${br.z} ${blockName}`, () => { });
+        return CANCEL;
+    }
+
     if (ev.command.toLowerCase().startsWith('/test graph')) {
         const commandExample = `/test graph [chunkWidth]`;
 
@@ -240,7 +286,8 @@ const startMathGame = () => {
         fileWriterService,
     });
 };
-// startMathGame();
+
+startMathGame();
 
 connectionsApi.onPlayersChange(({ action }) => {
     // if (action === 'dropped') { return; }
