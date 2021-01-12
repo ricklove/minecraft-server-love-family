@@ -109,7 +109,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const response = await formsApi.sendCustomForm({
             networkIdentifier,
             playerName,
-            title: `Math Problem`,
+            title: problem.formTitle,
             content: {
                 questionLabel: { type: 'label', text: problem.question },
                 answerRaw: { type: 'input', text: `Answer` },
@@ -140,17 +140,20 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
     };
 };
 
-const getRunningAverage = (playerState: null | PlayerState) => {
+const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (!playerState) {
         return '';
     }
+    const RUN_COUNT = 25;
     const h = playerState.answerHistory;
-    const lastNItems = h.slice(h.length - 25, h.length);
+    const lastNItems = h.length <= RUN_COUNT ? h : h.slice(h.length - RUN_COUNT, h.length);
     const count = lastNItems.length;
     const countCorrect = lastNItems.filter(x => x.wasCorrect).length;
+    const totalTimeMs = lastNItems.map(x => x.timeToAnswerMs).reduce((out, x) => { out += x; return out; }, 0);
+    const aveTimeMs = totalTimeMs / count;
     if (count <= 0) { return ''; }
 
-    return `runAve: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`;
+    return `runAve: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`;
 };
 
 const getPlayerScoreReport = (playerState: null | PlayerState) => {
@@ -162,7 +165,7 @@ const getPlayerScoreReport = (playerState: null | PlayerState) => {
         answeredCount: playerState?.answerHistory.length || 1,
         correctCount: playerState?.answerHistory.filter(x => x.wasCorrect).length || 1,
     };
-    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}% ${getRunningAverage(playerState)}`;
+    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}% ${getRunningAverageReport(playerState)}`;
     return scoreReport;
 };
 
@@ -240,9 +243,9 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
 };
 
 const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => string) => {
-    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'mathProblemHistory.tsv');
+    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'problemHistory.tsv');
     return async (a: StudyProblemAnswer) => await playerFileWriter.appendToFile(
-        `${a.wasCorrect ? 'correct' : 'wrong'} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${getRunningAverage()} \t${a.time}\n`);
+        `${a.wasCorrect ? 'correct' : 'wrong'} \t${a.problem.subjectKey} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.problem.question} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${getRunningAverage()} \t${a.time}\n`);
 };
 
 const continueStudyGame = (
@@ -253,12 +256,12 @@ const continueStudyGame = (
         fileWriterService?: FileWriterServiceType,
     }
 ) => {
-    console.log('continueMathGame', { players: options.players.map(x => x.playerName) });
+    console.log('continueStudyGame', { players: options.players.map(x => x.playerName) });
 
     if (gameState.timeoutId) { clearTimeout(gameState.timeoutId); }
 
     const newPlayers = options.players.filter(x => !gameState.playerStates.has(x.playerName));
-    // const droppedPlayerNames = [...mathState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
+    // const droppedPlayerNames = [...gameState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
     newPlayers.forEach(x => {
 
 
@@ -268,10 +271,10 @@ const continueStudyGame = (
             problemQueue: [],
             wrongAnswers: [],
             answerHistory: [],
-            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverage(playerState)) : undefined,
+            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)) : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
-        commandsApi.sendMessage(x.playerName, `You are now playing the Math Game!!!`);
+        commandsApi.sendMessage(x.playerName, `You are now playing the Study Game!!!`);
     });
 
     gameState.timeoutId = setTimeout(() => {
@@ -292,7 +295,7 @@ const continueStudyGame = (
 const stopStudyGame = () => {
     if (!gameState.timeoutId) { return; }
 
-    console.log('stopMathGame');
+    console.log('stopStudyGame');
     clearTimeout(gameState.timeoutId);
     gameState.timeoutId = null;
 };

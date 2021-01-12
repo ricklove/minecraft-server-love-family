@@ -58,18 +58,20 @@ const calculateProblem = ({ a, b, operator }: Pick<MathProblemType, 'operator' |
         if (a === 0) { a = 1; }
         const product = calculateAnswer({ a, b, operator: '*' });
 
+        const key = `${product} ${operator} ${a}`;
         const question = `What is ${product} ${operator} ${a}?`;
         const correctAnswer = calculateAnswer({ a: product, b: a, operator });
         const correctAnswerStatement = `${product} / ${a} = ${b}`;
 
-        return { subjectKey: 'math', key: question, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
+        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
     }
 
+    const key = `${a} ${operator} ${b}`;
     const question = `What is ${a} ${operator} ${b}?`;
     const correctAnswer = calculateAnswer({ a, b, operator });
     const correctAnswerStatement = `${a} ${operator} ${b} = ${correctAnswer}`;
 
-    return { subjectKey: 'math', key: question, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
+    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
 };
 
 const getNewProblem = () => {
