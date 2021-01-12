@@ -39,11 +39,52 @@ Alternatively, edit the world bdt table and set these manually.
     - [ ] Double Digit Subtraction
 - [x] Multiplication
 - [x] Division
+- [ ] Sequences
+    -  [ ] Multiples of n
+        - ..., 18, 27, __, 45, 54,...
+    -  [ ] Squares
+        - ..., 9, 27, __, 49, 64,...
 - [ ] Powers
 - [ ] Roots
 - [ ] Reduce Fractions
 - [ ] Prime Factors
 - [ ] Factor Polynomials
+
+## Spelling Problem Types
+
+- [ ] Missing Letters
+    - Prompt with whole word (for 1 sec): 
+        - Spell `snake`
+    - Display: 
+        - Spell `sn___`
+    - Option 1: Choose missing letters:
+        - `__ake`
+        - `__ack`
+        - `__ach`
+        - `__ak`
+    - Option 2: Choose whole word:
+        - `snake`
+        - `snack`
+        - `snach`
+        - `snak`
+- [ ] Problem sequence to complete word (with only initial prompt)
+    - Prompt with whole word (for 1 sec): 
+        - Spell `snake`
+    - Display: 
+        - Spell `s____`
+    - Choose rest of word
+        - `_nake`
+        - `_nack`
+        - `_nach`
+        - `_nak`
+    - Display: 
+        - Spell `sn___`
+    - Choose rest of word
+        - `__ake`
+        - `__ack`
+        - `__ach`
+        - `__ak`
+    
 
 ## Formula Memorization
 
@@ -156,7 +197,8 @@ Give a map item to a player, and when the player equips it, it will automaticall
 - Repeat
 
 
-## Sorting
+## Algorithms
+### Sorting
 
 https://en.wikipedia.org/wiki/Sorting_algorithm
 https://www.youtube.com/watch?v=8MsTNqK3o_w
@@ -170,3 +212,5 @@ https://www.youtube.com/watch?v=8MsTNqK3o_w
 - [ ] Stable Quick Sort: https://www.youtube.com/watch?v=8MsTNqK3o_w&t=424s
 - [ ] Heap Sort: 
 - [ ] Block Sort: https://www.youtube.com/watch?v=8MsTNqK3o_w&t=2377s
+
+
