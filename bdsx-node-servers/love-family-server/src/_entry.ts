@@ -4,7 +4,7 @@ import { command, chat, CANCEL, netevent, NetworkIdentifier, PacketId, createPac
 import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
-import { mathGame } from "./games/mathGame";
+import { studyGame } from "./games/studyGame";
 import { connectionsApi } from "./tools/playerConnections";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
@@ -70,18 +70,18 @@ command.net.on((ev) => {
         return CANCEL;
     }
 
-    if (ev.command.toLowerCase().startsWith('/math test')) {
+    if (ev.command.toLowerCase().startsWith('/study test')) {
         (async () => {
-            await mathGame.test_sendMathFormWithResult(formsApi, commandsApi, { networkIdentifier: ev.networkIdentifier, playerName, entity }, gameConsequences);
+            await studyGame.test_sendStudyFormWithResult(formsApi, commandsApi, { networkIdentifier: ev.networkIdentifier, playerName, entity }, gameConsequences);
         })();
         return CANCEL;
     }
-    if (ev.command.toLowerCase().startsWith('/math start')) {
-        startMathGame();
+    if (ev.command.toLowerCase().startsWith('/study start')) {
+        startStudyGame();
         return CANCEL;
     }
-    if (ev.command.toLowerCase().startsWith('/math stop')) {
-        mathGame.stopMathGame();
+    if (ev.command.toLowerCase().startsWith('/study stop')) {
+        studyGame.stopStudyGame();
         return CANCEL;
     }
 
@@ -278,24 +278,24 @@ const continueActiveAnimation = () => {
 // console.log('process.execPath', process.execPath);
 const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '_data'));
 const gameConsequences = createGameConsequences(system);
-const startMathGame = () => {
+const startStudyGame = () => {
     console.log('startMathGame');
-    mathGame.startMathGame(formsApi, commandsApi, gameConsequences, {
+    studyGame.startStudyGame(formsApi, commandsApi, gameConsequences, {
         intervalTimeMs: 20 * 1000,
         players: connectionsApi.getPlayerConnections(),
         fileWriterService,
     });
 };
 
-startMathGame();
+startStudyGame();
 
 connectionsApi.onPlayersChange(({ action }) => {
     // if (action === 'dropped') { return; }
 
     // Restart math game if running and new player joined
     console.log('Restart math game if running');
-    if (mathGame.isRunning()) {
-        startMathGame();
+    if (studyGame.isRunning()) {
+        startStudyGame();
     }
 });
 
@@ -305,7 +305,7 @@ command.hook.on((command) => {
         stopActiveAnimation();
 
         // Make sure math game is shutdown
-        mathGame.stopMathGame();
+        studyGame.stopStudyGame();
     }
 });
 
