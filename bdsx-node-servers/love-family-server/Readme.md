@@ -57,17 +57,17 @@ Alternatively, edit the world bdt table and set these manually.
         - Spell `snake`
     - Display: 
         - Spell `sn___`
-    - Option 1: Choose missing letters:
+    - [x] Option 1: Choose missing letters:
         - `__ake`
         - `__ack`
         - `__ach`
         - `__ak`
-    - Option 2: Choose whole word:
+    - [ ] Option 2: Choose whole word:
         - `snake`
         - `snack`
         - `snach`
         - `snak`
-- [ ] Problem sequence to complete word (with only initial prompt)
+- [x] Problem sequence to complete word (with only initial prompt)
     - Prompt with whole word (for 1 sec): 
         - Spell `snake`
     - Display: 
