@@ -1,6 +1,3 @@
-import { command } from "bdsx";
-import { std$_Allocate$16 } from "bdsx/native";
-
 type CommandService = {
     executeCommand: (command: string) => void
 };
@@ -24,7 +21,7 @@ const fillChunk = (commands: CommandService, containingPosition: { x: number, y:
     commands.executeCommand(`/fill ${x} ${0} ${z} ${x + 15} ${127} ${z + 15} ${blockName}`)
 };
 
-export const checkerBoardBedrock = (commands: CommandService, chunkWidth: number) => {
+export const testFillcheckerBoard = (commands: CommandService, chunkWidth: number) => {
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
         for (let z = 1024; z < 1024 + 16 * chunkWidth; z++) {
@@ -34,13 +31,13 @@ export const checkerBoardBedrock = (commands: CommandService, chunkWidth: number
     }
 };
 
-export const testFillSinCurve = (commands: CommandService, chunkWidth: number, offset: number) => {
+export const testFillSinCurve = (commands: CommandService, chunkWidth: number, offset: number, blockName: string) => {
 
     commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
         const z = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * 0.5 + 0.5) * 16 * chunkWidth);
-        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${0} ${1024 + z} ${'dirt'}`)
+        commands.executeCommand(`/fill ${x} ${0} ${1024} ${x} ${0} ${1024 + z} ${blockName}`)
     }
 };
 
@@ -61,7 +58,7 @@ export const testFillSinCurve_verticalThin = (commands: CommandService, chunkWid
 
     //commands.executeCommand(`/fill ${1024} ${0} ${1024} ${1024 + 16 * chunkWidth - 1} ${0} ${1024 + 16 * chunkWidth - 1} ${'air'}`)
 
-    const amplitudeRatio = 2 / (16 * chunkWidth);
+    const amplitudeRatio = 8 / (16 * chunkWidth);
 
     for (let x = 1024; x < 1024 + 16 * chunkWidth; x++) {
         const h = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * amplitudeRatio + (1 - amplitudeRatio)) * 16 * chunkWidth);
