@@ -21,8 +21,9 @@ export type MathProblemType = StudyProblemBase<'math'> & {
     questionPreview: string,
     a: number,
     b: number,
-    operator: MathProblemOperator;
-    correctAnswer: number
+    operator: MathProblemOperator,
+    correctAnswer: string,
+    correctAnswerValue: number,
     correctAnswerStatement: string,
 };
 
@@ -63,7 +64,7 @@ const calculateProblem = ({ a, b, operator }: Pick<MathProblemType, 'operator' |
         const correctAnswer = calculateAnswer({ a: product, b: a, operator });
         const correctAnswerStatement = `${product} / ${a} = ${b}`;
 
-        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
+        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
     }
 
     const key = `${a} ${operator} ${b}`;
@@ -71,7 +72,7 @@ const calculateProblem = ({ a, b, operator }: Pick<MathProblemType, 'operator' |
     const correctAnswer = calculateAnswer({ a, b, operator });
     const correctAnswerStatement = `${a} ${operator} ${b} = ${correctAnswer}`;
 
-    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer, correctAnswerStatement };
+    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a, b, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
 };
 
 const getNewProblem = () => {
@@ -93,7 +94,7 @@ const getWrongChoices = (problem: MathProblemType) => {
         a: Math.floor(a + (3 - Math.random() * 5)),
         b: Math.floor(b + (3 - Math.random() * 5)),
         operator,
-    }).correctAnswer)).filter(x => isFinite(x));
+    }).correctAnswerValue)).filter(x => isFinite(x));
     return new Set(wrongChoices.map(x => x + ''));
 };
 
@@ -120,7 +121,7 @@ const getReviewProblemSequence = (problem: MathProblemType): MathProblemType[] =
 const evaluateAnswer = (problem: MathProblemType, answerRaw: null | string) => {
     const answer = parseInt(answerRaw + '');
 
-    const isCorrect = answer === problem.correctAnswer;
+    const isCorrect = answer === problem.correctAnswerValue;
 
     if (isCorrect) {
         return {

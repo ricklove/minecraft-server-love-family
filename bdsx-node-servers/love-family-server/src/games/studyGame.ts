@@ -87,11 +87,12 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const formType = 'choices';
         if (formType === 'choices') {
 
-            const wrongChoices = problemSubject.getWrongChoices(problem);
-            const choices = [problem.correctAnswer, ...[...wrongChoices.values()]
+            const wrongChoicesSet = problemSubject.getWrongChoices(problem);
+            const wrongChoices = [...wrongChoicesSet.values()]
                 .filter(x => x !== problem.correctAnswer)
                 .map(x => ({ x, rand: Math.random() })).sort((a, b) => a.rand - b.rand).map(x => x.x)
-                .slice(0, 3)];
+                .slice(0, 3);
+            const choices = [problem.correctAnswer, ...wrongChoices];
             const choicesRandomized = choices
                 .map(x => ({ x, rand: Math.random() })).sort((a, b) => a.rand - b.rand).map(x => x.x);
             const buttons = choicesRandomized.map(x => x + '');
@@ -148,6 +149,8 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     const RUN_COUNT = 25;
 
     const allHistory = playerState.answerHistory;
+    if (allHistory.length <= 0) { return ''; }
+
     const lastSubjectKey = allHistory[allHistory.length - 1].problem.subjectKey;
 
     const h = allHistory.filter(x => x.problem.subjectKey === lastSubjectKey);

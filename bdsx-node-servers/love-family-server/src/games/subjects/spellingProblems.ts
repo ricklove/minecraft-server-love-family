@@ -15,11 +15,11 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         .slice(0, 2500)
         ;
 
-    const getProblemFromWord = (word: string): null | SpellingProblemType => {
+    const getProblemFromWord = (word: string, startLength_override?: number): null | SpellingProblemType => {
         const entry = spellingEntries.find(x => x.word === word);
         if (!entry) { return null; }
 
-        const startLength = Math.max(1, Math.floor(word.length - 2 - word.length * Math.random()));
+        const startLength = startLength_override ?? Math.max(1, Math.floor(word.length - 2 - word.length * Math.random()));
         const endLength = word.length - startLength;
         const revealPart = word.substr(0, startLength) + getUnderlines(endLength);
         const guessPart = getUnderlines(startLength) + word.substr(startLength);
@@ -30,7 +30,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
         return {
             subjectKey: 'spelling',
-            key: word,
+            key: word + '' + (startLength_override || ''),
             formTitle: 'Spell',
             question: revealPart,
             questionPreview: word,
@@ -51,6 +51,13 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         getNewProblem,
         getWrongChoices: (p) => new Set(p.wrongChoices),
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer }),
-        getReviewProblemSequence: (p) => p.wordGroup.words.map(x => getProblemFromWord(x)).filter(x => x).map(x => x!),
+        getReviewProblemSequence: (p) => [
+            // Same word with decreasing start length: i.e: ___t, ___rt, __art, _tart, start
+            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.word.length - 1)),
+            // Same word with increasing start length: i.e: start, _tart, __art, ___rt, ___t
+            // ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, i +1)),
+            // Similar words
+            ...p.wordGroup.words.map(x => getProblemFromWord(x)),
+        ].filter(x => x).map(x => x!),
     };
 };
