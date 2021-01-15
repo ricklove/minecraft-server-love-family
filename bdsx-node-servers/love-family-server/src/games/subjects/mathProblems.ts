@@ -1,9 +1,17 @@
 import { StudyProblemBase, StudySubject } from "../types";
 
+const subjectKey = 'math';
 const MAX_MULTIPLICATION = 12;
 
 /** For division, question: product / a = b */
 type MathProblemOperator = '*' | '+' | '-' | '/' | '^';
+const mathCategories = [
+    { subjectKey, categoryKey: '+', categoryTitle: 'Addition', },
+    { subjectKey, categoryKey: '-', categoryTitle: 'Subtraction', },
+    { subjectKey, categoryKey: '*', categoryTitle: 'Multiplication', },
+    { subjectKey, categoryKey: '/', categoryTitle: 'Division', },
+    { subjectKey, categoryKey: '^', categoryTitle: 'Powers', },
+];
 
 export type MathProblemType = StudyProblemBase<'math'> & {
     key: string,
@@ -164,10 +172,11 @@ const evaluateAnswer = (problem: MathProblemType, answerRaw: null | string) => {
 
 export const createMathSubject = (): StudySubject<MathProblemType, 'math'> => {
     return {
-        subjectKey: 'math',
+        subjectKey,
         getNewProblem,
         getWrongChoices,
         evaluateAnswer,
         getReviewProblemSequence,
+        getCategories: () => mathCategories,
     };
 };

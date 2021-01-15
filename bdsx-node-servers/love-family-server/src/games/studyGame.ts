@@ -271,23 +271,52 @@ const continueStudyGame = (
 
     const newPlayers = options.players.filter(x => !gameState.playerStates.has(x.playerName));
     // const droppedPlayerNames = [...gameState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
-    newPlayers.forEach(x => {
+    newPlayers.forEach(async x => {
 
+        await delay(5 * 1000);
 
         const playerState: PlayerState = {
+            isReady: false,
             playerName: x.playerName,
             timeStart: new Date(),
             problemQueue: [],
             wrongAnswers: [],
             answerHistory: [],
+            selectedSubjectCategories: [],
             writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)) : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
         commandsApi.sendMessage(x.playerName, `You are now playing the Study Game!!!`);
+
+        const subjectCategories = [
+            ...mathSubject.getCategories(),
+            ...spellingSubject.getCategories(),
+        ];
+        const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
+        subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: x.categoryTitle });
+        const response = await formsApi.sendCustomForm({
+            networkIdentifier: x.networkIdentifier,
+            playerName: x.playerName,
+            title: 'Choose Subjects',
+            content: {
+                questionLabel: { type: 'label', text: 'Select your subjects below:' },
+                // a: { type: 'toggle', text: '' },
+                ...catObj
+            },
+        });
+
+        const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
+        const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
+        playerState.selectedSubjectCategories = selectedSubjectCategories;
+
+        playerState.isReady = true;
     });
 
     gameState.timeoutId = setTimeout(() => {
         options.players.forEach(p => {
+            const playerState = gameState.playerStates.get(p.playerName);
+            if (!playerState || !playerState.isReady) { return; }
+
             sendStudyFormWithResult(formsApi, commandsApi, p, gameConsequences);
         });
 
@@ -310,11 +339,16 @@ const stopStudyGame = () => {
 };
 
 type PlayerState = {
+    isReady: boolean,
     playerName: string,
     timeStart: Date,
     problemQueue: StudyProblemType[],
     wrongAnswers: StudyProblemType[],
     answerHistory: StudyProblemAnswer[],
+    selectedSubjectCategories: {
+        subjectKey: string,
+        categoryKey: string,
+    }[],
     writeAnswerToFile?: (answer: StudyProblemAnswer) => Promise<void>,
 };
 
