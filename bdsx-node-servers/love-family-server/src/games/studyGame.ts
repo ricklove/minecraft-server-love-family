@@ -9,15 +9,14 @@ import { createMathSubject, MathProblemType } from "./subjects/mathProblems";
 import { createSpellingSubject, SpellingProblemType } from "./subjects/spellingProblems";
 import { StudySubject } from "./types";
 
-const mathSubject = createMathSubject();
-const spellingSubject = createSpellingSubject();
+const subjects = [
+    createMathSubject(),
+    createSpellingSubject(),
+];
 
 type StudyProblemType = MathProblemType | SpellingProblemType;
 const getSubject = (subjectKey: StudyProblemType['subjectKey']): StudySubject<StudyProblemType, typeof subjectKey> => {
-    switch (subjectKey) {
-        case 'spelling': return spellingSubject;
-        default: return mathSubject;
-    }
+    return subjects.find(s => s.subjectKey === subjectKey) ?? subjects[0];
 };
 
 type StudyProblemAnswer = {
@@ -31,24 +30,25 @@ type StudyProblemAnswer = {
 
 const REVIEW_RATIO = 0.9;
 
-const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<StudyProblemAnswer> => {
+const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<null | StudyProblemAnswer> => {
     console.log('sendProblemForm', { playerName });
 
     // Improve distribution
-    testRandomDistribution();
+    // testRandomDistribution();
+
+    const playerState = gameState.playerStates.get(playerName);
+    if (!playerState) {
+        console.log('sendProblemForm playerState is null', { playerName });
+        return null;
+    }
 
     const getQueuedProblem = () => {
-        const playerState = gameState.playerStates.get(playerName);
-        if (!playerState || playerState.problemQueue.length <= 0) { return; }
-
         return playerState.problemQueue.shift();
     };
 
     const getReviewProblem = () => {
 
-        const playerState = gameState.playerStates.get(playerName);
-        if (!playerState || playerState.wrongAnswers.length <= 0) { return; }
-
+        if (playerState.wrongAnswers.length <= 0) { return; }
         // Chance for new problem
         if (playerState.wrongAnswers.length < 3 && Math.random() > REVIEW_RATIO) { return; }
 
@@ -75,8 +75,9 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const wProblem = getReviewProblem();
         if (wProblem) { return wProblem; }
 
-        const randomSubject = getSubject(Math.random() < 0.5 ? 'math' : 'spelling');
-        const problem = randomSubject.getNewProblem();
+        const includedSubjects = subjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
+        const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? subjects[0];
+        const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories);
         return problem;
     };
 
@@ -204,13 +205,14 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: StudyProblemAn
 };
 
 const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: CommandsApiType, player: GamePlayerInfo, gameConsequences: GameConsequenceType) => {
-    const result = await sendProblemForm(formsApi, commandsApi, player.networkIdentifier, player.playerName);
-
     const playerState = gameState.playerStates.get(player.playerName);
     if (!playerState) {
         console.warn('playerState not found', { playerName: player.playerName });
         return;
     }
+
+    const result = await sendProblemForm(formsApi, commandsApi, player.networkIdentifier, player.playerName);
+    if (!result) { return; }
 
     playerState.answerHistory.push(result);
 
@@ -272,9 +274,6 @@ const continueStudyGame = (
     const newPlayers = options.players.filter(x => !gameState.playerStates.has(x.playerName));
     // const droppedPlayerNames = [...gameState.players.keys()].filter(playerName => !options.players.some(p => p.playerName === playerName));
     newPlayers.forEach(async x => {
-
-        await delay(5 * 1000);
-
         const playerState: PlayerState = {
             isReady: false,
             playerName: x.playerName,
@@ -286,17 +285,22 @@ const continueStudyGame = (
             writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)) : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
-        commandsApi.sendMessage(x.playerName, `You are now playing the Study Game!!!`);
+    });
+
+    // Non ready players
+    options.players.map(x => ({ x, playerState: gameState.playerStates.get(x.playerName)! })).filter(p => !p.playerState.isReady).forEach(async ({ x, playerState }) => {
 
         const subjectCategories = [
-            ...mathSubject.getCategories(),
-            ...spellingSubject.getCategories(),
+            ...subjects.reduce((out, s) => [
+                ...out,
+                ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
+            ], []),
         ];
         const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
-        subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: x.categoryTitle });
+        subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: `${x.subjectTitle}: ${x.categoryTitle}` });
         const response = await formsApi.sendCustomForm({
             networkIdentifier: x.networkIdentifier,
-            playerName: x.playerName,
+            playerName: playerState.playerName,
             title: 'Choose Subjects',
             content: {
                 questionLabel: { type: 'label', text: 'Select your subjects below:' },
@@ -310,6 +314,12 @@ const continueStudyGame = (
         playerState.selectedSubjectCategories = selectedSubjectCategories;
 
         playerState.isReady = true;
+
+        console.log('Player Ready', {
+            subjectCategories,
+            playerState,
+        });
+        commandsApi.sendMessage(playerState.playerName, `You are now playing the Study Game!!!`);
     });
 
     gameState.timeoutId = setTimeout(() => {

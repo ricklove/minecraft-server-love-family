@@ -43,13 +43,14 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         };
     };
 
-    const getNewProblem = (): SpellingProblemType => {
+    const getNewProblem = (selectedCategories): SpellingProblemType => {
         const randomEntry = spellingEntries[Math.floor(Math.random() * spellingEntries.length)];
         return getProblemFromWord(randomEntry.word)!;
     };
 
     return {
-        subjectKey,
+        subjectKey: 'spelling',
+        subjectTitle: 'Spelling',
         getNewProblem,
         getWrongChoices: (p) => new Set(p.wrongChoices),
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer }),
@@ -62,7 +63,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             ...p.wordGroup.words.map(x => getProblemFromWord(x)),
         ].filter(x => x).map(x => x!),
         getCategories: () => [
-            { subjectKey, categoryKey: 'spelling', categoryTitle: 'Spelling' },
+            { subjectKey, categoryKey: 'words', categoryTitle: 'Words' },
         ],
     };
 };
