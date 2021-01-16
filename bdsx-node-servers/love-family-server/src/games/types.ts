@@ -13,4 +13,5 @@ export type StudySubject<TProblem extends StudyProblemBase<TSubjectKey>, TSubjec
     getWrongChoices: (problem: TProblem) => Set<string>,
     evaluateAnswer: (problem: TProblem, answer: string | null | undefined) => { isCorrect: boolean, responseMessage?: string },
     getReviewProblemSequence: (problem: TProblem) => TProblem[],
+    getCategories: () => { subjectKey: string, categoryKey: string, categoryTitle: string }[],
 };

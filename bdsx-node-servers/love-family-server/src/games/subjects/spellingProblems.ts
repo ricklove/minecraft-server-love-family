@@ -1,6 +1,8 @@
 import { StudyProblemBase, StudySubject } from "../types";
 import { getSpellingEntries } from "./spellingEntries";
 
+const subjectKey = 'spelling';
+
 export type SpellingProblemType = StudyProblemBase<'spelling'> & {
     word: string,
     wrongChoices: string[],
@@ -47,7 +49,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
     };
 
     return {
-        subjectKey: 'spelling',
+        subjectKey,
         getNewProblem,
         getWrongChoices: (p) => new Set(p.wrongChoices),
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer }),
@@ -59,5 +61,8 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             // Similar words
             ...p.wordGroup.words.map(x => getProblemFromWord(x)),
         ].filter(x => x).map(x => x!),
+        getCategories: () => [
+            { subjectKey, categoryKey: 'spelling', categoryTitle: 'Spelling' },
+        ],
     };
 };

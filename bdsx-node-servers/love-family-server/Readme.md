@@ -29,7 +29,7 @@ Alternatively, edit the world bdt table and set these manually.
 
 - [x] Record to File
 - [ ] Decrease Review Problem Repeat Interval?
-- [ ] Select Problem Types
+- [started] Select Problem Types
 
 ## Math Problem Types
 
@@ -44,7 +44,7 @@ Alternatively, edit the world bdt table and set these manually.
         - ..., 18, 27, __, 45, 54,...
     -  [ ] Squares
         - ..., 9, 27, __, 49, 64,...
-- [ ] Powers
+- [x] Powers
 - [ ] Roots
 - [ ] Reduce Fractions
 - [ ] Prime Factors
