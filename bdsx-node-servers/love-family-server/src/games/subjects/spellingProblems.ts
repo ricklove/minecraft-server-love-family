@@ -32,7 +32,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
         return {
             subjectKey: 'spelling',
-            key: word + '' + (startLength_override || ''),
+            key: word + ':' + startLength,
             formTitle: 'Spell',
             question: revealPart,
             questionPreview: word,
@@ -56,7 +56,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer }),
         getReviewProblemSequence: (p) => [
             // Same word with decreasing start length: i.e: ___t, ___rt, __art, _tart, start
-            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.word.length - 1)),
+            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.word.length - 1 - i)),
             // Same word with increasing start length: i.e: start, _tart, __art, ___rt, ___t
             // ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, i +1)),
             // Similar words

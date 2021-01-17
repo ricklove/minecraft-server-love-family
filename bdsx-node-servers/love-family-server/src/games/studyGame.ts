@@ -43,7 +43,14 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
     }
 
     const getQueuedProblem = () => {
-        return playerState.problemQueue.shift();
+        // return playerState.problemQueue.shift();
+
+        if (playerState.problemQueue.length <= 0) { return; }
+
+        console.log('getQueuedProblem', { playerName: playerState.playerName, problemQueue: playerState.problemQueue });
+
+        // Don't remove from queue
+        return playerState.problemQueue[0];
     };
 
     const getReviewProblem = () => {
@@ -62,6 +69,8 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
 
         const reviewSequence = reviewSubject.getReviewProblemSequence(review);
         playerState.problemQueue.push(...reviewSequence);
+
+        console.log('getReviewProblem - added to start of problemQueue', { playerName: playerState.playerName, reviewSequence, problemQueue: playerState.problemQueue });
 
         // Run as queued problem
         return getQueuedProblem();
