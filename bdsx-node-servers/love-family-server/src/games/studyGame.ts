@@ -297,39 +297,48 @@ const continueStudyGame = (
     });
 
     // Non ready players
-    options.players.map(x => ({ x, playerState: gameState.playerStates.get(x.playerName)! })).filter(p => !p.playerState.isReady).forEach(async ({ x, playerState }) => {
+    options.players.map(x => ({ x, playerState: gameState.playerStates.get(x.playerName)! }))
+        .filter(p =>
+            // If not ready
+            !p.playerState.isReady
+            // Or if not selected a subject
+            || p.playerState.selectedSubjectCategories.length <= 0
+            // TODO: Or change subject after a while
+            // || p.playerState.answerHistory.length % 60 === 59
+        )
+        .forEach(async ({ x, playerState }) => {
 
-        const subjectCategories = [
-            ...subjects.reduce((out, s) => [
-                ...out,
-                ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
-            ], []),
-        ];
-        const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
-        subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: `${x.subjectTitle}: ${x.categoryTitle}` });
-        const response = await formsApi.sendCustomForm({
-            networkIdentifier: x.networkIdentifier,
-            playerName: playerState.playerName,
-            title: 'Choose Subjects',
-            content: {
-                questionLabel: { type: 'label', text: 'Select your subjects below:' },
-                // a: { type: 'toggle', text: '' },
-                ...catObj
-            },
+            const subjectCategories = [
+                ...subjects.reduce((out, s) => [
+                    ...out,
+                    ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
+                ], []),
+            ];
+            const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
+            subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: `${x.subjectTitle}: ${x.categoryTitle}` });
+            const response = await formsApi.sendCustomForm({
+                networkIdentifier: x.networkIdentifier,
+                playerName: playerState.playerName,
+                title: 'Choose Subjects',
+                content: {
+                    questionLabel: { type: 'label', text: 'Select your subjects below:' },
+                    // a: { type: 'toggle', text: '' },
+                    ...catObj
+                },
+            });
+
+            const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
+            const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
+            playerState.selectedSubjectCategories = selectedSubjectCategories;
+
+            playerState.isReady = true;
+
+            console.log('Player Ready', {
+                subjectCategories,
+                playerState,
+            });
+            commandsApi.sendMessage(playerState.playerName, `You are now playing the Study Game!!!`);
         });
-
-        const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
-        const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
-        playerState.selectedSubjectCategories = selectedSubjectCategories;
-
-        playerState.isReady = true;
-
-        console.log('Player Ready', {
-            subjectCategories,
-            playerState,
-        });
-        commandsApi.sendMessage(playerState.playerName, `You are now playing the Study Game!!!`);
-    });
 
     gameState.timeoutId = setTimeout(() => {
         options.players.forEach(p => {
