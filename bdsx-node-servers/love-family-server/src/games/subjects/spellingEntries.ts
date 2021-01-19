@@ -13,6 +13,17 @@ export const getSpellingEntries = (): { word: string, mispellings: string[], wor
         const wordGroup = wordGroups.find(x => x.words.some(w => w === word)) ?? { words: [] };
         return { word, mispellings, wordGroup };
     });
+
+    // Ensure no mispelling in a valid word - OK
+    const debug_actualWordsInMispellings = [] as string[];
+    const allRealWords = new Set(problems.map(x => x.word));
+    problems.forEach(x => {
+        debug_actualWordsInMispellings.push(...x.mispellings.filter(m => allRealWords.has(m)));
+        x.mispellings = x.mispellings.filter(m => !allRealWords.has(m));
+    });
+
+    console.log('getSpellingEntries', { debug_actualWordsInMispellings });
+
     return problems;
 };
 
