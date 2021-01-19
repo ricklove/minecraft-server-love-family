@@ -26,7 +26,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         const revealPart = word.substr(0, startLength) + getUnderlines(endLength);
         const guessPart = getUnderlines(startLength) + word.substr(startLength);
         const wrongChoices = entry.mispellings.map(x => {
-            return getUnderlines(startLength) + x.substr(x.length - endLength);
+            return getUnderlines(startLength) + x.substr(startLength);
         });
         const wordGroup = entry.wordGroup;
 
