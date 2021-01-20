@@ -1,16 +1,15 @@
 import { StudyProblemBase, StudySubject } from "../types";
 
-const subjectKey = 'math';
 const MAX_MULTIPLICATION = 12;
 
 /** For division, question: product / a = b */
 type MathProblemOperator = '*' | '+' | '-' | '/' | '^';
 const mathCategories = [
-    { subjectKey, categoryKey: '+', categoryTitle: 'Addition', },
-    { subjectKey, categoryKey: '-', categoryTitle: 'Subtraction', },
-    { subjectKey, categoryKey: '*', categoryTitle: 'Multiplication', },
-    { subjectKey, categoryKey: '/', categoryTitle: 'Division', },
-    { subjectKey, categoryKey: '^', categoryTitle: 'Powers', },
+    { categoryKey: '+', categoryTitle: 'Addition', },
+    { categoryKey: '-', categoryTitle: 'Subtraction', },
+    { categoryKey: '*', categoryTitle: 'Multiplication', },
+    { categoryKey: '/', categoryTitle: 'Division', },
+    { categoryKey: '^', categoryTitle: 'Powers', },
 ];
 
 export type MathProblemType = StudyProblemBase<'math'> & {
@@ -18,6 +17,7 @@ export type MathProblemType = StudyProblemBase<'math'> & {
     formTitle: string,
     question: string,
     questionPreview: string,
+    questionPreviewTimeMs: number,
     a: number,
     b: number,
     operator: MathProblemOperator,
@@ -65,7 +65,7 @@ const calculateProblem = ({ x, y, operator }: { x: number, y: number, operator: 
         const correctAnswer = calculateAnswer({ x: product, y: x, operator });
         const correctAnswerStatement = `${product} / ${x} = ${y}`;
 
-        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
+        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, questionPreviewTimeMs: 1000, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
     }
 
     const key = `${x} ${operator} ${y}`;
@@ -73,16 +73,27 @@ const calculateProblem = ({ x, y, operator }: { x: number, y: number, operator: 
     const correctAnswer = calculateAnswer({ x, y, operator });
     const correctAnswerStatement = `${x} ${operator} ${y} = ${correctAnswer}`;
 
-    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
+    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, questionPreviewTimeMs: 1000, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
 };
 
-const getNewProblem = () => {
-    const operator =
-        Math.random() < 0.1 ? '^'
-            : Math.random() < 0.1 ? '/'
-                : Math.random() < 0.1 ? '-'
-                    : Math.random() < 0.3 ? '+'
-                        : '*';
+const operatorChances = [
+    { operator: '^', ratio: 1 },
+    { operator: '/', ratio: 1 },
+    { operator: '-', ratio: 1 },
+    { operator: '+', ratio: 3 },
+    { operator: '*', ratio: 3 },
+] as const;
+
+const getNewProblem = (selectedCategories: { categoryKey: string }[]) => {
+    const includedOperators = operatorChances.filter(x => selectedCategories.some(c => c.categoryKey === x.operator));
+    const choices = [] as typeof includedOperators;
+    includedOperators.forEach(x => {
+        for (let i = 0; i < x.ratio; i++) {
+            choices.push(x);
+        }
+    });
+    const operator = choices[Math.floor(choices.length * Math.random())].operator ?? '*' as const;
+
     if (operator === '^') {
         const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX_MULTIPLICATION + 1));
         const b = a > 3 ? 2
@@ -172,7 +183,8 @@ const evaluateAnswer = (problem: MathProblemType, answerRaw: null | string) => {
 
 export const createMathSubject = (): StudySubject<MathProblemType, 'math'> => {
     return {
-        subjectKey,
+        subjectKey: 'math',
+        subjectTitle: 'Math',
         getNewProblem,
         getWrongChoices,
         evaluateAnswer,
