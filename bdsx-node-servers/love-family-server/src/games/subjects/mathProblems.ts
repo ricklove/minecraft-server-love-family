@@ -17,6 +17,7 @@ export type MathProblemType = StudyProblemBase<'math'> & {
     formTitle: string,
     question: string,
     questionPreview: string,
+    questionPreviewTimeMs: number,
     a: number,
     b: number,
     operator: MathProblemOperator,
@@ -64,7 +65,7 @@ const calculateProblem = ({ x, y, operator }: { x: number, y: number, operator: 
         const correctAnswer = calculateAnswer({ x: product, y: x, operator });
         const correctAnswerStatement = `${product} / ${x} = ${y}`;
 
-        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
+        return { subjectKey: 'math', key, formTitle, question, questionPreview: question, questionPreviewTimeMs: 1000, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
     }
 
     const key = `${x} ${operator} ${y}`;
@@ -72,7 +73,7 @@ const calculateProblem = ({ x, y, operator }: { x: number, y: number, operator: 
     const correctAnswer = calculateAnswer({ x, y, operator });
     const correctAnswerStatement = `${x} ${operator} ${y} = ${correctAnswer}`;
 
-    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
+    return { subjectKey: 'math', key, formTitle, question, questionPreview: question, questionPreviewTimeMs: 1000, a: x, b: y, operator, correctAnswer: correctAnswer + '', correctAnswerValue: correctAnswer, correctAnswerStatement };
 };
 
 const operatorChances = [

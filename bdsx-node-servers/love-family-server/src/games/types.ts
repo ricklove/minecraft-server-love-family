@@ -4,6 +4,7 @@ export type StudyProblemBase<TSubjectKey extends string> = {
     formTitle: string,
     question: string,
     questionPreview: string,
+    questionPreviewTimeMs: number,
     correctAnswer: string,
 };
 

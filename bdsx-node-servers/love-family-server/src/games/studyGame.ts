@@ -129,8 +129,8 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         return response.formData?.answerRaw.value ?? null;
     };
 
-    commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: 1, fadeOutTimeSec: 0 });
-    await delay(1000);
+    commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
+    await delay(problem.questionPreviewTimeMs);
 
     const timeSent = Date.now();
     const answerRaw = await sendProblemForm();
@@ -153,13 +153,13 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
 
 const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (!playerState) {
-        return '';
+        return null;
     }
 
     const RUN_COUNT = 25;
 
     const allHistory = playerState.answerHistory;
-    if (allHistory.length <= 0) { return ''; }
+    if (allHistory.length <= 0) { return null; }
 
     const lastSubjectKey = allHistory[allHistory.length - 1].problem.subjectKey;
 
@@ -170,9 +170,16 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     const totalTimeMs = lastNItems.map(x => x.timeToAnswerMs).reduce((out, x) => { out += x; return out; }, 0);
     const aveTimeMs = totalTimeMs / count;
 
-    if (count <= 0) { return ''; }
+    if (count <= 0) { return null; }
 
-    return `runAve ${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`;
+    return {
+        summary: `runAve ${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`,
+        summary_short: `${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`,
+        averageTimeMs: aveTimeMs,
+        countCorrect,
+        countScope: count,
+        lastSubjectKey,
+    };
 };
 
 const getPlayerScoreReport = (playerState: null | PlayerState) => {
@@ -184,7 +191,16 @@ const getPlayerScoreReport = (playerState: null | PlayerState) => {
         answeredCount: playerState?.answerHistory.length || 1,
         correctCount: playerState?.answerHistory.filter(x => x.wasCorrect).length || 1,
     };
-    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}% ${getRunningAverageReport(playerState)}`;
+    const scoreReport = `${score.correctCount}/${score.answeredCount} ${(Math.floor(100 * (score.correctCount / score.answeredCount)) + '').padStart(2, ' ')}% ${getRunningAverageReport(playerState)?.summary ?? ''}`;
+    return scoreReport;
+};
+
+const getPlayerShortScoreReport = (playerState: null | PlayerState) => {
+    if (!playerState) {
+        return;
+    }
+
+    const scoreReport = `${getRunningAverageReport(playerState)?.summary_short ?? ''}`;
     return scoreReport;
 };
 
@@ -199,17 +215,22 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: StudyProblemAn
     const { correctAnswer } = problem;
 
     if (wasCorrect) {
-        const scoreReport = getPlayerScoreReport(playerState);
-        commandsApi.sendMessage(playerName, responseMessage ?? `Excellent! ${scoreReport}`);
+        const scoreReport = getPlayerShortScoreReport(playerState);
+        //commandsApi.sendMessage(playerName, responseMessage ?? `Excellent! ${scoreReport}`);
+        commandsApi.showTitle(playerName, responseMessage ?? `Excellent!`, { subTitle: scoreReport, fadeInTimeSec: 0, stayTimeSec: 3, fadeOutTimeSec: 0 });
+
         return;
     }
 
     if (answerRaw === null) {
-        commandsApi.sendMessage(playerName, responseMessage ?? `You didn't even answer the question!`);
+        // commandsApi.sendMessage(playerName, responseMessage ?? `You didn't even answer the question!`);
+        commandsApi.showTitle(playerName, `Oops!`, { subTitle: responseMessage ?? `You didn't even answer the question!`, fadeInTimeSec: 0, stayTimeSec: 3, fadeOutTimeSec: 0 });
+
         return;
     }
 
-    commandsApi.sendMessage(playerName, responseMessage ?? `Incorrect! The answer is ${correctAnswer}!`);
+    // commandsApi.sendMessage(playerName, responseMessage ?? `Incorrect! The answer is ${correctAnswer}!`);
+    commandsApi.showTitle(playerName, `Incorrect!`, { subTitle: responseMessage ?? `The answer is ${correctAnswer}!`, fadeInTimeSec: 0, stayTimeSec: 3, fadeOutTimeSec: 0 });
     return;
 };
 
@@ -291,7 +312,7 @@ const continueStudyGame = (
             wrongAnswers: [],
             answerHistory: [],
             selectedSubjectCategories: [],
-            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)) : undefined,
+            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)?.summary ?? '') : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
     });
@@ -351,7 +372,7 @@ const continueStudyGame = (
         // Report
         const report = [...gameState.playerStates.values()].map(p => `${p.playerName} ${getPlayerScoreReport(p)}`).join('\n');
         console.log('report', { report });
-        commandsApi.sendMessage('@a', report);
+        // commandsApi.sendMessage('@a', report);
 
         // Loop
         continueStudyGame(formsApi, commandsApi, gameConsequences, options);
