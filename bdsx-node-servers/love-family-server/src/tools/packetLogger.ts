@@ -2,15 +2,15 @@ import { netevent, PacketId } from "bdsx";
 
 // Network Hooking: Print all packets
 const tooLoudFilter = new Set([
-    // PacketId.UpdateBlock,
     PacketId.ClientCacheBlobStatus,
-    // PacketId.NetworkStackLatencyPacket,
-    // PacketId.LevelChunk,
-    // PacketId.ClientCacheMissResponse,
-    // PacketId.MoveEntityDelta,
-    // PacketId.SetEntityMotion,
-    // PacketId.SetEntityData,
-    // PacketId.NetworkChunkPublisherUpdate,
+    PacketId.UpdateBlock,
+    PacketId.NetworkStackLatencyPacket,
+    PacketId.LevelChunk,
+    PacketId.ClientCacheMissResponse,
+    PacketId.MoveEntityDelta,
+    PacketId.SetEntityMotion,
+    PacketId.SetEntityData,
+    PacketId.NetworkChunkPublisherUpdate,
 ]);
 
 export const startPacketLogger = () => {

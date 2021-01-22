@@ -132,23 +132,37 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
     commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
     await delay(problem.questionPreviewTimeMs);
 
-    const timeSent = Date.now();
-    const answerRaw = await sendProblemForm();
 
+    const sendProblemFormWithReissueOnAccidentalAnswer = async () => {
 
-    const time = new Date();
-    const timeToAnswerMs = Date.now() - timeSent;
+        const timeSent = Date.now();
+        const answerRaw = await sendProblemForm();
+        const time = new Date();
+        const timeToAnswerMs = Date.now() - timeSent;
+        const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw);
 
-    const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw);
+        // Re-issue question on accidental tap
+        if (answerRaw == null) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
+        if (timeToAnswerMs < 1000) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
+        if (timeToAnswerMs < 3000 && !isCorrect) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
 
-    return {
-        wasCorrect: isCorrect,
-        responseMessage,
-        answerRaw,
-        problem,
-        time,
-        timeToAnswerMs,
+        return {
+            wasCorrect: isCorrect,
+            responseMessage,
+            answerRaw,
+            problem,
+            time,
+            timeToAnswerMs,
+        };
     };
+
+    return sendProblemFormWithReissueOnAccidentalAnswer();
 };
 
 const getRunningAverageReport = (playerState: null | PlayerState) => {
