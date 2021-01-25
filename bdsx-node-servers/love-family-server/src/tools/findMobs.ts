@@ -59,14 +59,18 @@ const getEntityPositions = (system: IVanillaServerSystem) => {
 
 type EntityPositionData = NonNullable<ReturnType<typeof getEntityPositions>>;
 
-export const getEntityDiff = (a: EntityPositionData, b: EntityPositionData) => {
+export const getEntityDiff = (a: EntityPositionData, b: EntityPositionData): (EntityPositionData['chunks'][number] & {
+    entities_added: EntityInfo[],
+    entities_removed: EntityInfo[],
+    entities_same: EntityInfo[],
+})[] => {
 
     const allKeys = [...a?.chunks ?? [], ...b?.chunks ?? []].map(x => x.key);
     const chunkDiffs = allKeys.map(k => {
         const aChunk = a?.chunks.find(x => x.key === k);
         const bChunk = b?.chunks.find(x => x.key === k);
         if (!aChunk && !bChunk) {
-            return;
+            return null;
         }
         if (!aChunk) {
             return { ...bChunk!, entities: [], entities_added: bChunk!.entities, entities_removed: [], entities_same: [], };
