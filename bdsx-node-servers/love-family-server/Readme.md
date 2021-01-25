@@ -23,6 +23,14 @@ Alternatively, edit the world bdt table and set these manually.
 
 ----
 
+References:
+
+- https://bedrock.dev/docs/stable/Scripting
+
+
+
+----
+
 # Todo
 
 ## Math Game

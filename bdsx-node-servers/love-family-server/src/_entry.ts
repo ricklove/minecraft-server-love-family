@@ -14,6 +14,7 @@ import { graphSinCurve } from './graphing/graph';
 import { runBubbleSort } from './sorting/bubbleSort';
 import { runBubbleSort2 } from './sorting/bubbleSort2';
 import { calculateMapPosition } from './graphing/map';
+import { showEntityDiffReport, showEntityPositionReport } from './tools/findMobs';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -259,6 +260,16 @@ command.net.on((ev) => {
     }
     if (ev.command.toLowerCase().startsWith('/test continue')) {
         continueActiveAnimation();
+        return CANCEL;
+    }
+
+
+    if (ev.command.toLowerCase().startsWith('/report diff')) {
+        showEntityDiffReport(system);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/report')) {
+        showEntityPositionReport(system);
         return CANCEL;
     }
 });
