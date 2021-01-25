@@ -41,7 +41,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             key: word + ':' + startLength + keySuffix,
             formTitle: 'Spell',
             question: revealPart,
-            questionPreview: categoryKey === 'chat-only' ? '' : word,
+            questionPreview: categoryKey === 'chat-only' ? undefined : word,
             questionPreviewTimeMs: 3000,
             questionPreviewChat: word,
             questionPreviewChatTimeMs: 0,

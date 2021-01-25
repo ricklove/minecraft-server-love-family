@@ -129,15 +129,16 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         return response.formData?.answerRaw.value ?? null;
     };
 
-    if (problem.questionPreview && problem.questionPreviewTimeMs) {
-        commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
-        await delay(problem.questionPreviewTimeMs);
-    }
-
     // For Text to speech
     if (problem.questionPreviewChat) {
         commandsApi.sendMessage(playerName, problem.questionPreviewChat);
         await delay(problem.questionPreviewChatTimeMs ?? 0);
+    }
+
+    // Title Display
+    if (problem.questionPreview && problem.questionPreviewTimeMs) {
+        commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
+        await delay(problem.questionPreviewTimeMs);
     }
 
     const sendProblemFormWithReissueOnAccidentalAnswer = async () => {
@@ -238,7 +239,7 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: StudyProblemAn
     if (wasCorrect) {
         const scoreReport = getPlayerShortScoreReport(playerState);
         //commandsApi.sendMessage(playerName, responseMessage ?? `Excellent! ${scoreReport}`);
-        commandsApi.showTitle(playerName, responseMessage ?? `Excellent!`, { subTitle: scoreReport, fadeInTimeSec: 0, stayTimeSec: 3, fadeOutTimeSec: 0 });
+        commandsApi.showTitle(playerName, responseMessage ?? `Excellent!`, { subTitle: scoreReport, fadeInTimeSec: 0, stayTimeSec: 1, fadeOutTimeSec: 0 });
 
         return;
     }
