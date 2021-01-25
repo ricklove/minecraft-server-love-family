@@ -39,6 +39,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             formTitle: 'Spell',
             question: revealPart,
             questionPreview: word,
+            questionPreviewChat: word,
             questionPreviewTimeMs: 3000,
             correctAnswer: guessPart,
             word,

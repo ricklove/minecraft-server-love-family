@@ -129,6 +129,11 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         return response.formData?.answerRaw.value ?? null;
     };
 
+    // Text to speech
+    if (problem.questionPreviewChat) {
+        commandsApi.sendMessage(playerName, problem.questionPreviewChat);
+    }
+
     commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
     await delay(problem.questionPreviewTimeMs);
 
