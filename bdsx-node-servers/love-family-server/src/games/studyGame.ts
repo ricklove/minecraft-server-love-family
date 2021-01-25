@@ -156,7 +156,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         if (timeToAnswerMs < 1000) {
             return await sendProblemFormWithReissueOnAccidentalAnswer();
         }
-        if (timeToAnswerMs < 3000 && !isCorrect) {
+        if (timeToAnswerMs < 1500 && !isCorrect) {
             return await sendProblemFormWithReissueOnAccidentalAnswer();
         }
 
