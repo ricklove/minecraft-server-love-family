@@ -3,30 +3,9 @@ import { CommandsApiType } from "../tools/commandsApi";
 import { FormsApiType } from "../tools/formsApi";
 import { delay } from "../utils/delay";
 import { FileWriterServiceType } from "../utils/fileWriter";
-import { testRandomDistribution } from "../utils/random";
 import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
-import { createMathSubject, MathProblemType } from "./subjects/mathProblems";
-import { createSpellingSubject, SpellingProblemType } from "./subjects/spellingProblems";
-import { StudySubject } from "./types";
-
-const subjects = [
-    createMathSubject(),
-    createSpellingSubject(),
-];
-
-type StudyProblemType = MathProblemType | SpellingProblemType;
-const getSubject = (subjectKey: StudyProblemType['subjectKey']): StudySubject<StudyProblemType, typeof subjectKey> => {
-    return subjects.find(s => s.subjectKey === subjectKey) ?? subjects[0];
-};
-
-type StudyProblemAnswer = {
-    wasCorrect: boolean,
-    answerRaw: string | null,
-    responseMessage?: string | null,
-    problem: StudyProblemType,
-    time: Date,
-    timeToAnswerMs: number,
-};
+import { progressReport, RunningAverageEntry } from "./progressReport";
+import { allSubjects, getSubject, StudyProblemAnswer, StudyProblemType, StudySubject } from "./types";
 
 const REVIEW_RATIO = 0.9;
 
@@ -84,8 +63,8 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const wProblem = getReviewProblem();
         if (wProblem) { return wProblem; }
 
-        const includedSubjects = subjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
-        const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? subjects[0];
+        const includedSubjects = allSubjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
+        const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? allSubjects[0];
         const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories);
         return problem;
     };
@@ -195,12 +174,12 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (count <= 0) { return null; }
 
     return {
-        summary: `runAve ${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`,
-        summary_short: `${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`,
+        summary: progressReport.toString_runningAverage({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
+        summary_short: progressReport.toString_runningAverage_short({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
         averageTimeMs: aveTimeMs,
         countCorrect,
-        countScope: count,
-        lastSubjectKey,
+        countTotal: count,
+        subjectKey: lastSubjectKey,
     };
 };
 
@@ -305,10 +284,12 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
     });
 };
 
-const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => string) => {
-    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'problemHistory.tsv');
+export const playerDataFileName = 'problemHistory.tsv';
+
+const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => RunningAverageEntry) => {
+    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, playerDataFileName);
     return async (a: StudyProblemAnswer) => await playerFileWriter.appendToFile(
-        `${a.wasCorrect ? 'correct' : 'wrong'} \t${a.problem.subjectKey} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.problem.question} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${getRunningAverage()} \t${a.time}\n`);
+        progressReport.toString_answerLine({ ...a, runningAverage: getRunningAverage() }));
 };
 
 const continueStudyGame = (
@@ -334,7 +315,7 @@ const continueStudyGame = (
             wrongAnswers: [],
             answerHistory: [],
             selectedSubjectCategories: [],
-            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)?.summary ?? '') : undefined,
+            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)!) : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
     });
@@ -352,7 +333,7 @@ const continueStudyGame = (
         .forEach(async ({ x, playerState }) => {
 
             const subjectCategories = [
-                ...subjects.reduce((out, s) => [
+                ...allSubjects.reduce((out, s) => [
                     ...out,
                     ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
                 ], []),

@@ -1,3 +1,25 @@
+import { createMathSubject, MathProblemType } from "./subjects/mathProblems";
+import { createSpellingSubject, SpellingProblemType } from "./subjects/spellingProblems";
+
+export const allSubjects = [
+    createMathSubject(),
+    createSpellingSubject(),
+];
+export type StudyProblemType = MathProblemType | SpellingProblemType;
+export const getSubject = (subjectKey: StudyProblemType['subjectKey']): StudySubject<StudyProblemType, typeof subjectKey> => {
+    return allSubjects.find(s => s.subjectKey === subjectKey) ?? allSubjects[0];
+};
+
+
+export type StudyProblemAnswer = {
+    wasCorrect: boolean,
+    answerRaw: string | null,
+    responseMessage?: string | null,
+    problem: StudyProblemType,
+    time: Date,
+    timeToAnswerMs: number,
+};
+
 export type StudyProblemBase<TSubjectKey extends string> = {
     subjectKey: TSubjectKey,
     key: string,

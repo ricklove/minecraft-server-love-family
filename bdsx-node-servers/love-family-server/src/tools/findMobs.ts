@@ -1,7 +1,9 @@
+import { Vector3 } from "../utils/vector";
+
 type EntityInfo = {
     id: string,
     type: string,
-    pos: VectorXYZ,
+    pos: Vector3,
 };
 
 const getEntityPositions = (system: IVanillaServerSystem) => {
@@ -22,7 +24,7 @@ const getEntityPositions = (system: IVanillaServerSystem) => {
             };
         }).filter(x => x).map(x => x!);
 
-    const chunks = [] as { key: string, chunkPos: VectorXYZ, entities: EntityInfo[] }[];
+    const chunks = [] as { key: string, chunkPos: Vector3, entities: EntityInfo[] }[];
     data.forEach(x => {
         const cx = Math.floor(x.pos.x / 16);
         const cy = 0;
@@ -173,7 +175,7 @@ export const showEntityPositionReport = (system: IVanillaServerSystem) => {
     const chunkMapB = drawChunkMap(result, c => c.entities.filter(x => x.pos.y < 60 && x.pos.y >= 30));
     const chunkMapC = drawChunkMap(result, c => c.entities.filter(x => x.pos.y < 30));
 
-    const posToString = (pos: VectorXYZ) => { return `(${pos.x.toFixed(0)},${pos.y.toFixed(0)},${pos.z.toFixed(0)})`; };
+    const posToString = (pos: Vector3) => { return `(${pos.x.toFixed(0)},${pos.y.toFixed(0)},${pos.z.toFixed(0)})`; };
 
     const report = ''
         + result.chunks

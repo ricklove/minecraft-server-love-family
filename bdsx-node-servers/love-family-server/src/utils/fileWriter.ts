@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 
+export const readFileText = async (filePath: string) => {
+    return await promisify(fs.readFile)(filePath, { encoding: 'utf-8' });
+};
+
 const createAppendFileWriter = (filePath: string) => {
 
     return {
@@ -20,8 +24,10 @@ const createAppendFileWriter = (filePath: string) => {
 
 export const createFileWriterService = (rootPath: string) => {
 
+    const getPlayerFilePath = (playerName: string, fileName: string) => path.join(rootPath, 'playerData', playerName, fileName);
     return {
-        createPlayerAppendFileWriter: (playerName: string, fileName: string) => createAppendFileWriter(path.join(rootPath, 'playerData', playerName, fileName)),
+        getPlayerFilePath,
+        createPlayerAppendFileWriter: (playerName: string, fileName: string) => createAppendFileWriter(getPlayerFilePath(playerName, fileName)),
     };
 };
 export type FileWriterServiceType = ReturnType<typeof createFileWriterService>;
