@@ -319,7 +319,7 @@ const startStudyGame = () => {
     });
 };
 
-// startStudyGame();
+startStudyGame();
 
 connectionsApi.onPlayersChange(({ action }) => {
     // if (action === 'dropped') { return; }
