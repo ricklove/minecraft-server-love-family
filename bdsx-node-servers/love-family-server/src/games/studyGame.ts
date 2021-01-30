@@ -332,33 +332,55 @@ const continueStudyGame = (
         )
         .forEach(async ({ x, playerState }) => {
 
-            const subjectCategories = [
-                ...allSubjects.reduce((out, s) => [
-                    ...out,
-                    ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
-                ], []),
-            ];
-            const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
-            subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: `${x.subjectTitle}: ${x.categoryTitle}` });
-            const response = await formsApi.sendCustomForm({
+            // For each selected subject, show a category selection
+            const subjectObj = {} as { [subjectKey: string]: { type: 'toggle', text: string } };
+            allSubjects.forEach(x => subjectObj[x.subjectKey] = { type: 'toggle', text: `${x.subjectTitle}` });
+
+            const subjectResponse = await formsApi.sendCustomForm({
                 networkIdentifier: x.networkIdentifier,
                 playerName: playerState.playerName,
                 title: 'Choose Subjects',
                 content: {
                     questionLabel: { type: 'label', text: 'Select your subjects below:' },
                     // a: { type: 'toggle', text: '' },
-                    ...catObj
+                    ...subjectObj
                 },
             });
 
-            const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
-            const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
-            playerState.selectedSubjectCategories = selectedSubjectCategories;
+            const subjectFormDataResult = subjectResponse.formData as { [subjectKey: string]: { value: boolean } };
+            const enabledSubjects = allSubjects.filter(x => subjectFormDataResult[x.subjectKey].value);
 
+            // Get the selected categories for each enabled subject
+            const allSelectedSubjectCategories = [] as {
+                subjectKey: string;
+                categoryKey: string;
+            }[];
+            for (const s of enabledSubjects) {
+
+                const catObj = {} as { [categoryKey: string]: { type: 'toggle', text: string } };
+                const subjectCategories = s.getCategories();
+                subjectCategories.forEach(x => catObj[x.categoryKey] = { type: 'toggle', text: `${s.subjectTitle}: ${x.categoryTitle}` });
+
+                const response = await formsApi.sendCustomForm({
+                    networkIdentifier: x.networkIdentifier,
+                    playerName: playerState.playerName,
+                    title: 'Choose Subjects',
+                    content: {
+                        questionLabel: { type: 'label', text: 'Select your subjects below:' },
+                        // a: { type: 'toggle', text: '' },
+                        ...catObj
+                    },
+                });
+
+                const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
+                const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
+                allSelectedSubjectCategories.push(...selectedSubjectCategories.map(x => ({ subjectKey: s.subjectKey, categoryKey: x.categoryKey })));
+            }
+
+            playerState.selectedSubjectCategories = allSelectedSubjectCategories;
             playerState.isReady = true;
 
             console.log('Player Ready', {
-                subjectCategories,
                 playerState,
             });
             commandsApi.sendMessage(playerState.playerName, `You are now playing the Study Game!!!`);
