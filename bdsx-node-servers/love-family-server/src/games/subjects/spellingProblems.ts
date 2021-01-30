@@ -4,20 +4,20 @@ import { getSpellingEntries } from "./spellingEntries";
 const subjectKey = 'spelling';
 type CategoryBaseKey = 'normal' | 'chat-only' | 'next-letter';
 
-const toStringCategoryKey = (categoryBaseKey: CategoryBaseKey, level: number): string => {
-    return `${categoryBaseKey}:${level}`;
+const toStringCategoryKey = (categoryBaseKey: CategoryBaseKey, levelKey: string): string => {
+    return `${categoryBaseKey}:${levelKey}`;
 }
-const parseCategoryKey = (categoryKey: string): { categoryBaseKey: CategoryBaseKey, level: number } => {
-    const [categoryBaseKey, level] = categoryKey.split(':');
+const parseCategoryKey = (categoryKey: string): { categoryBaseKey: CategoryBaseKey, levelKey: string } => {
+    const [categoryBaseKey, levelKey] = categoryKey.split(':');
     return {
         categoryBaseKey: categoryBaseKey as CategoryBaseKey,
-        level: parseInt(level, 10),
+        levelKey,
     };
 }
 
 export type SpellingProblemType = StudyProblemBase<'spelling'> & {
     categoryBaseKey: CategoryBaseKey,
-    levelIndex: number,
+    levelKey: string,
     word: string,
     wrongChoices: string[],
     wordGroup: { words: string[] };
@@ -28,8 +28,7 @@ const createLevels = (entries: ReturnType<typeof getSpellingEntries>, levelCount
     const levelEntries = [...new Array(levelCount)].map((_, iLevel) => entries.slice(iLevel * levelSize, (iLevel + 1) * levelSize));
     return levelEntries.map((x, iLevel) => {
         return {
-            levelIndex: iLevel,
-            level: iLevel + 1,
+            levelKey: `${iLevel + 1}`,
             entries: x,
         };
     });
@@ -42,7 +41,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
     const spellingEntries = getSpellingEntries();
     const levels = createLevels(spellingEntries);
 
-    const getProblemFromWord = (word: string, categoryBaseKey: CategoryBaseKey, levelIndex: number, startLength_override?: number, keySuffix: string = ''): null | SpellingProblemType => {
+    const getProblemFromWord = (word: string, categoryBaseKey: CategoryBaseKey, levelKey: string, startLength_override?: number, keySuffix: string = ''): null | SpellingProblemType => {
         const entry = spellingEntries.find(x => x.word === word);
         if (!entry) { return null; }
 
@@ -88,7 +87,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         return {
             subjectKey: 'spelling',
             categoryBaseKey,
-            levelIndex,
+            levelKey,
             key: word + ':' + startLength + keySuffix,
             formTitle: 'Spell',
             question: revealPart,
@@ -105,10 +104,10 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
     const getNewProblem = (selectedCategories: { categoryKey: string }[]): SpellingProblemType => {
         const randomSelectedCategory = selectedCategories[Math.floor(Math.random() * selectedCategories.length)].categoryKey ?? 'normal:1';
-        const { categoryBaseKey, level } = parseCategoryKey(randomSelectedCategory);
-        const levelEntries = levels[level - 1].entries;
+        const { categoryBaseKey, levelKey } = parseCategoryKey(randomSelectedCategory);
+        const levelEntries = levels.find(x => x.levelKey === levelKey)?.entries ?? levels[0].entries;
         const randomEntry = levelEntries[Math.floor(Math.random() * levelEntries.length)];
-        return getProblemFromWord(randomEntry.word, (categoryBaseKey || 'normal') as CategoryBaseKey, level - 1)!;
+        return getProblemFromWord(randomEntry.word, (categoryBaseKey || 'normal') as CategoryBaseKey, levelKey)!;
     };
 
     return {
@@ -119,18 +118,18 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer, responseMessage: p.correctAnswer === answer ? undefined : `${p.word} = ${p.correctAnswer}` }),
         getReviewProblemSequence: (p) => [
             // Same word with decreasing start length: i.e: ___t, ___rt, __art, _tart, start
-            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.categoryBaseKey, p.levelIndex, p.word.length - 1 - i, 'decreasing')),
+            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.categoryBaseKey, p.levelKey, p.word.length - 1 - i, 'decreasing')),
             // Same word letter by letter
-            ...[...new Array(p.word.length)].map((x, i) => getProblemFromWord(p.word, 'next-letter', p.levelIndex, i, 'next-letter')),
+            ...[...new Array(p.word.length)].map((x, i) => getProblemFromWord(p.word, 'next-letter', p.levelKey, i, 'next-letter')),
             // ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, i +1)),
             // Similar words
-            ...p.wordGroup.words.map(x => getProblemFromWord(x, p.categoryBaseKey, p.levelIndex)).filter(x => x?.word !== p.word),
+            ...p.wordGroup.words.map(x => getProblemFromWord(x, p.categoryBaseKey, p.levelKey)).filter(x => x?.word !== p.word),
             // Finally the original problem again
             p,
         ].filter(x => x).map(x => x!),
         getCategories: () => [
             // ...levels.map(l => ({ subjectKey, categoryKey: 'normal', categoryTitle: `Words: Level ${l.level}` })),
-            ...levels.map(l => ({ subjectKey, categoryKey: toStringCategoryKey('chat-only', l.level), categoryTitle: `Level ${l.level} (speech)` })),
+            ...levels.map(l => ({ subjectKey, categoryKey: toStringCategoryKey('chat-only', l.levelKey), categoryTitle: `Level ${l.levelKey} (speech)` })),
         ],
 
         // { subjectKey, categoryKey: 'chat-only', categoryTitle: `Words (Chat Speech)` },
