@@ -3,30 +3,9 @@ import { CommandsApiType } from "../tools/commandsApi";
 import { FormsApiType } from "../tools/formsApi";
 import { delay } from "../utils/delay";
 import { FileWriterServiceType } from "../utils/fileWriter";
-import { testRandomDistribution } from "../utils/random";
 import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
-import { createMathSubject, MathProblemType } from "./subjects/mathProblems";
-import { createSpellingSubject, SpellingProblemType } from "./subjects/spellingProblems";
-import { StudySubject } from "./types";
-
-const subjects = [
-    createMathSubject(),
-    createSpellingSubject(),
-];
-
-type StudyProblemType = MathProblemType | SpellingProblemType;
-const getSubject = (subjectKey: StudyProblemType['subjectKey']): StudySubject<StudyProblemType, typeof subjectKey> => {
-    return subjects.find(s => s.subjectKey === subjectKey) ?? subjects[0];
-};
-
-type StudyProblemAnswer = {
-    wasCorrect: boolean,
-    answerRaw: string | null,
-    responseMessage?: string | null,
-    problem: StudyProblemType,
-    time: Date,
-    timeToAnswerMs: number,
-};
+import { progressReport, RunningAverageEntry } from "./progressReport";
+import { allSubjects, getSubject, StudyProblemAnswer, StudyProblemType, StudySubject } from "./types";
 
 const REVIEW_RATIO = 0.9;
 
@@ -84,8 +63,8 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const wProblem = getReviewProblem();
         if (wProblem) { return wProblem; }
 
-        const includedSubjects = subjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
-        const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? subjects[0];
+        const includedSubjects = allSubjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
+        const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? allSubjects[0];
         const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories);
         return problem;
     };
@@ -129,26 +108,48 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         return response.formData?.answerRaw.value ?? null;
     };
 
-    commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
-    await delay(problem.questionPreviewTimeMs);
+    // For Text to speech
+    if (problem.questionPreviewChat) {
+        commandsApi.sendMessage(playerName, problem.questionPreviewChat);
+        await delay(problem.questionPreviewChatTimeMs ?? 0);
+    }
 
-    const timeSent = Date.now();
-    const answerRaw = await sendProblemForm();
+    // Title Display
+    if (problem.questionPreview && problem.questionPreviewTimeMs) {
+        commandsApi.showTitle(playerName, problem.questionPreview, { fadeInTimeSec: 0, stayTimeSec: problem.questionPreviewTimeMs / 1000, fadeOutTimeSec: 0 });
+        await delay(problem.questionPreviewTimeMs);
+    }
 
+    const sendProblemFormWithReissueOnAccidentalAnswer = async () => {
 
-    const time = new Date();
-    const timeToAnswerMs = Date.now() - timeSent;
+        const timeSent = Date.now();
+        const answerRaw = await sendProblemForm();
+        const time = new Date();
+        const timeToAnswerMs = Date.now() - timeSent;
+        const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw);
 
-    const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw);
+        // Re-issue question on accidental tap
+        if (answerRaw == null) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
+        if (timeToAnswerMs < 1000) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
+        if (timeToAnswerMs < 1500 && !isCorrect) {
+            return await sendProblemFormWithReissueOnAccidentalAnswer();
+        }
 
-    return {
-        wasCorrect: isCorrect,
-        responseMessage,
-        answerRaw,
-        problem,
-        time,
-        timeToAnswerMs,
+        return {
+            wasCorrect: isCorrect,
+            responseMessage,
+            answerRaw,
+            problem,
+            time,
+            timeToAnswerMs,
+        };
     };
+
+    return sendProblemFormWithReissueOnAccidentalAnswer();
 };
 
 const getRunningAverageReport = (playerState: null | PlayerState) => {
@@ -173,12 +174,12 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (count <= 0) { return null; }
 
     return {
-        summary: `runAve ${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(aveTimeMs / 1000).toFixed(1)}secs`,
-        summary_short: `${lastSubjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`,
+        summary: progressReport.toString_runningAverage({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
+        summary_short: progressReport.toString_runningAverage_short({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
         averageTimeMs: aveTimeMs,
         countCorrect,
-        countScope: count,
-        lastSubjectKey,
+        countTotal: count,
+        subjectKey: lastSubjectKey,
     };
 };
 
@@ -217,7 +218,7 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: StudyProblemAn
     if (wasCorrect) {
         const scoreReport = getPlayerShortScoreReport(playerState);
         //commandsApi.sendMessage(playerName, responseMessage ?? `Excellent! ${scoreReport}`);
-        commandsApi.showTitle(playerName, responseMessage ?? `Excellent!`, { subTitle: scoreReport, fadeInTimeSec: 0, stayTimeSec: 3, fadeOutTimeSec: 0 });
+        commandsApi.showTitle(playerName, responseMessage ?? `Excellent!`, { subTitle: scoreReport, fadeInTimeSec: 0, stayTimeSec: 1, fadeOutTimeSec: 0 });
 
         return;
     }
@@ -283,10 +284,12 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
     });
 };
 
-const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => string) => {
-    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, 'problemHistory.tsv');
+export const playerDataFileName = 'problemHistory.tsv';
+
+const createPlayerFileWriter = (fileWriterService: FileWriterServiceType, playerName: string, getRunningAverage: () => RunningAverageEntry) => {
+    const playerFileWriter = fileWriterService.createPlayerAppendFileWriter(playerName, playerDataFileName);
     return async (a: StudyProblemAnswer) => await playerFileWriter.appendToFile(
-        `${a.wasCorrect ? 'correct' : 'wrong'} \t${a.problem.subjectKey} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.problem.question} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${getRunningAverage()} \t${a.time}\n`);
+        progressReport.toString_answerLine({ ...a, runningAverage: getRunningAverage() }));
 };
 
 const continueStudyGame = (
@@ -312,7 +315,7 @@ const continueStudyGame = (
             wrongAnswers: [],
             answerHistory: [],
             selectedSubjectCategories: [],
-            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)?.summary ?? '') : undefined,
+            writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)!) : undefined,
         };
         gameState.playerStates.set(x.playerName, playerState);
     });
@@ -330,7 +333,7 @@ const continueStudyGame = (
         .forEach(async ({ x, playerState }) => {
 
             const subjectCategories = [
-                ...subjects.reduce((out, s) => [
+                ...allSubjects.reduce((out, s) => [
                     ...out,
                     ...s.getCategories().map(x => ({ subjectKey: s.subjectKey, subjectTitle: s.subjectTitle, ...x })),
                 ], []),

@@ -12,7 +12,7 @@ export const performanceTestFill = (commands: CommandService, chunkWidth: number
 
 };
 
-const fillChunk = (commands: CommandService, containingPosition: { x: number, y: number, z: number }, blockName: string) => {
+const fillChunk = (commands: CommandService, containingPosition: Vector3, blockName: string) => {
 
     let { x, y, z } = containingPosition;
     x = Math.floor(x / 16) * 16;

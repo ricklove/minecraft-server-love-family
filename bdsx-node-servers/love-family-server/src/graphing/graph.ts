@@ -1,9 +1,12 @@
+import { Vector3 } from "../utils/vector";
+import { calculateMapPosition } from "./map";
+
 type CommandService = {
     executeCommand: (command: string) => void
 };
 
 export const graph = (commands: CommandService, getYRatio: (xRatio: number) => number, options: {
-    origin: { x: number, y: number, z: number },
+    origin: Vector3,
     width: number,
     height: number,
     blockName: string,
@@ -25,7 +28,7 @@ export const graph = (commands: CommandService, getYRatio: (xRatio: number) => n
 };
 
 export const graphBars = (commands: CommandService, getBar: (x: number) => { height: number, aboveBlockName?: string, belowBlockName?: string, atBlockName?: string }, options: {
-    origin: { x: number, y: number, z: number },
+    origin: Vector3,
     width: number,
     height: number,
     blockName: string,
@@ -48,6 +51,38 @@ export const graphBars = (commands: CommandService, getBar: (x: number) => { hei
         }
     }
 };
+
+export const graphMap = (commands: CommandService, getValue: (x: number) => { value: number, value_bottom?: number, aboveBlockName?: string, belowBlockName?: string, atBlockName?: string }, options: {
+    origin: Vector3,
+    blockName: string,
+}) => {
+
+    const o = calculateMapPosition(options.origin);
+    const blockName = options.blockName;
+    const w = 128;
+    const h = 128;
+    const y = Math.floor(options.origin.y);
+
+    for (let x = 0; x < w; x++) {
+        const vResult = getValue(x);
+        const val = Math.min(h - 1, vResult.value);
+        const { aboveBlockName, belowBlockName, atBlockName } = vResult;
+
+        const zVal = 128 - val;
+
+        commands.executeCommand(`/fill   ${o.topLeft.x + x} ${y} ${o.topLeft.z + zVal + 1}   ${o.topLeft.x + x} ${y} ${o.topLeft.z + 0}         ${aboveBlockName ?? 'air'}`);
+        commands.executeCommand(`/fill   ${o.topLeft.x + x} ${y} ${o.topLeft.z + zVal - 1}   ${o.topLeft.x + x} ${y} ${o.topLeft.z + 127}       ${belowBlockName ?? blockName}`);
+        if (atBlockName) {
+            const val_bottom = Math.min(h - 1, vResult.value_bottom ?? vResult.value);
+            const zVal_bottom = 128 - val_bottom;
+
+            commands.executeCommand(`/fill   ${o.topLeft.x + x} ${y} ${o.topLeft.z + zVal}   ${o.topLeft.x + x} ${y} ${o.topLeft.z + zVal_bottom}       ${atBlockName ?? blockName}`);
+            // commands.executeCommand(`/setblock   ${o.topLeft.x + x} ${y} ${o.topLeft.z + zVal}   ${atBlockName}`);
+        }
+    }
+};
+
+
 
 export const graphLine = (commands: CommandService, blockName: string) => {
     // const h = Math.floor((Math.sin(x / (16 * chunkWidth - 1) * 2 * Math.PI + offset) * amplitudeRatio + (1 - amplitudeRatio)) * 16 * chunkWidth);

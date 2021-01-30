@@ -4,7 +4,7 @@ import { command, chat, CANCEL, netevent, NetworkIdentifier, PacketId, createPac
 import { createCommandsApi } from "./tools/commandsApi";
 import { createFormsApi } from "./tools/formsApi";
 import { sendFormExample_simple, sendFormExample_modal, sendFormExample_custom } from "./tools/formsApi.tests";
-import { studyGame } from "./games/studyGame";
+import { playerDataFileName, studyGame } from "./games/studyGame";
 import { connectionsApi } from "./tools/playerConnections";
 import { testRandomDistribution } from "./utils/random";
 import { createGameConsequences } from "./games/gameConsequences";
@@ -14,12 +14,15 @@ import { graphSinCurve } from './graphing/graph';
 import { runBubbleSort } from './sorting/bubbleSort';
 import { runBubbleSort2 } from './sorting/bubbleSort2';
 import { calculateMapPosition } from './graphing/map';
+import { showEntityDiffReport, showEntityPositionReport } from './tools/findMobs';
+import { test_graphProgressReport } from './games/progressReport';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
 const formsApi = createFormsApi();
 
-startPacketLogger();
+// Packet Logger
+// startPacketLogger();
 connectionsApi.startConnectionTracking();
 
 // Command Handler
@@ -253,12 +256,41 @@ command.net.on((ev) => {
         setActiveAnimation(animation);
         return CANCEL;
     }
+
+    if (ev.command.toLowerCase().startsWith('/test progress')) {
+
+        const playerPosition = system.getComponent(entity, MinecraftComponent.Position);
+        if (!playerPosition) {
+            console.warn(`missing playerPosition`);
+            return CANCEL;
+        }
+
+        const pos = playerPosition.data;
+
+        const filePath = fileWriterService.getPlayerFilePath(playerName, playerDataFileName);
+        const animation = test_graphProgressReport({
+            executeCommand: x => system.executeCommand(x, () => { }),
+        }, { ...pos, y: pos.y - 2 }, filePath);
+        //  setActiveAnimation(animation);
+        return CANCEL;
+    }
+
     if (ev.command.toLowerCase().startsWith('/test stop')) {
         stopActiveAnimation();
         return CANCEL;
     }
     if (ev.command.toLowerCase().startsWith('/test continue')) {
         continueActiveAnimation();
+        return CANCEL;
+    }
+
+
+    if (ev.command.toLowerCase().startsWith('/report diff')) {
+        showEntityDiffReport(system);
+        return CANCEL;
+    }
+    if (ev.command.toLowerCase().startsWith('/report')) {
+        showEntityPositionReport(system);
         return CANCEL;
     }
 });
