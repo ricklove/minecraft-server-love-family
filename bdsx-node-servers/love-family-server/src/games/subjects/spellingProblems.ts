@@ -59,26 +59,28 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
                 return {
                     correctAnswer: nextLetter,
-                    wrongAnswers: nextLetterWrongChoices,
+                    wrongChoices: nextLetterWrongChoices,
                 };
             }
 
             const guessPart = getUnderlines(startLength) + word.substr(startLength);
             const wrongChoicesAll = entry.mispellings.map(x => {
                 return getUnderlines(startLength) + x.substr(startLength);
-            });
+            })
+                .filter(x => x);
+
             // Don't include choices that are actually the real word, just split on a duplicate letter 
             const wrongChoices = wrongChoicesAll.filter(x => !word.endsWith(x.replace(/_/g, '')));
 
             return {
                 correctAnswer: guessPart,
-                wrongAnswers: wrongChoices,
+                wrongChoices,
             };
         };
 
         const {
             correctAnswer,
-            wrongAnswers,
+            wrongChoices,
         } = getChoices();
 
 
@@ -86,6 +88,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
         return {
             subjectKey: 'spelling',
+            categoryKey: toStringCategoryKey(categoryBaseKey, levelKey),
             categoryBaseKey,
             levelKey,
             key: word + ':' + startLength + keySuffix,
@@ -97,7 +100,7 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             questionPreviewChatTimeMs: 0,
             correctAnswer,
             word,
-            wrongChoices: wrongAnswers,
+            wrongChoices,
             wordGroup,
         };
     };

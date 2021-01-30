@@ -66,7 +66,12 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const includedSubjects = allSubjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
         const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? allSubjects[0];
         const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories);
-        return problem;
+
+        // Add to problem queue
+        playerState.problemQueue.push(problem);
+
+        // Run as queued problem (so it will auto-repeat if skipped)
+        return getQueuedProblem() ?? problem;
     };
 
     const problem = getProblem();
@@ -132,10 +137,10 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         if (answerRaw == null) {
             return await sendProblemFormWithReissueOnAccidentalAnswer();
         }
-        if (timeToAnswerMs < 1000) {
+        if (timeToAnswerMs < 500) {
             return await sendProblemFormWithReissueOnAccidentalAnswer();
         }
-        if (timeToAnswerMs < 1500 && !isCorrect) {
+        if (timeToAnswerMs < 1000 && !isCorrect) {
             return await sendProblemFormWithReissueOnAccidentalAnswer();
         }
 
@@ -162,9 +167,11 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     const allHistory = playerState.answerHistory;
     if (allHistory.length <= 0) { return null; }
 
-    const lastSubjectKey = allHistory[allHistory.length - 1].problem.subjectKey;
+    const lastProblem = allHistory[allHistory.length - 1].problem;
+    const lastSubjectKey = lastProblem.subjectKey;
+    const lastCategoryKey = lastProblem.categoryKey;
 
-    const h = allHistory.filter(x => x.problem.subjectKey === lastSubjectKey);
+    const h = allHistory.filter(x => x.problem.subjectKey === lastSubjectKey && x.problem.categoryKey === lastCategoryKey);
     const lastNItems = h.length <= RUN_COUNT ? h : h.slice(h.length - RUN_COUNT, h.length);
     const count = lastNItems.length;
     const countCorrect = lastNItems.filter(x => x.wasCorrect).length;
@@ -174,12 +181,13 @@ const getRunningAverageReport = (playerState: null | PlayerState) => {
     if (count <= 0) { return null; }
 
     return {
-        summary: progressReport.toString_runningAverage({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
-        summary_short: progressReport.toString_runningAverage_short({ subjectKey: lastSubjectKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
+        summary: progressReport.toString_runningAverage({ subjectKey: lastSubjectKey, categoryKey: lastCategoryKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
+        summary_short: progressReport.toString_runningAverage_short({ subjectKey: lastSubjectKey, categoryKey: lastCategoryKey, countCorrect, countTotal: count, averageTimeMs: aveTimeMs }),
         averageTimeMs: aveTimeMs,
         countCorrect,
         countTotal: count,
         subjectKey: lastSubjectKey,
+        categoryKey: lastCategoryKey,
     };
 };
 

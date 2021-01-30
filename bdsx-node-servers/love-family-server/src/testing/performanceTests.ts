@@ -1,3 +1,5 @@
+import { Vector3 } from "../utils/vector";
+
 type CommandService = {
     executeCommand: (command: string) => void
 };

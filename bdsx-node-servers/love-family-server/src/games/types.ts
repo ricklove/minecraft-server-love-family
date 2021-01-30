@@ -22,6 +22,7 @@ export type StudyProblemAnswer = {
 
 export type StudyProblemBase<TSubjectKey extends string> = {
     subjectKey: TSubjectKey,
+    categoryKey: string,
     key: string,
     formTitle: string,
     question: string,
