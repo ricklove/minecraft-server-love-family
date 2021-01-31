@@ -122,7 +122,7 @@ type ResponseData<T> = {
 };
 const formCallback = {} as { [formId: number]: (response: ResponseData<unknown>) => void; }
 
-const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object): Promise<ResponseData<TFormData>> => {
+const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object, timeoutMs?: number): Promise<ResponseData<TFormData>> => {
     let formId = Math.floor(Math.random() * 2147483647) + 1;
     let packet = createPacket(PacketId.ModalFormRequest);
     packet.setUint32(formId, 0x28);
@@ -131,7 +131,18 @@ const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object)
     packet.dispose();
 
     const promise = new Promise<ResponseData<TFormData>>((resolve, reject) => {
-        formCallback[formId] = (x) => resolve(x as ResponseData<TFormData>);
+        let wasTimedOut = false;
+        const timeoutId = timeoutMs ? setTimeout(() => {
+            // reject('timeout');
+            wasTimedOut = true;
+            reject('timeout');
+        }, timeoutMs) : null;
+
+        formCallback[formId] = (x) => {
+            if (wasTimedOut) { return; }
+            if (timeoutId) { clearTimeout(timeoutId); }
+            resolve(x as ResponseData<TFormData>);
+        };
     });
 
     return promise;
@@ -166,7 +177,7 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
 export const createFormsApi = () => {
 
     return {
-        sendSimpleForm: async  <TContent extends { [name: string]: FormButtonItem }>(options: { title: string, content: string, buttons: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+        sendSimpleForm: async  <TContent extends { [name: string]: FormButtonItem }>(options: { title: string, content: string, buttons: TContent, networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs?: number }): Promise<{
             networkIdentifier: NetworkIdentifier,
             formData: { buttonClickedName: keyof TContent | null }
         }> => {
@@ -176,14 +187,14 @@ export const createFormsApi = () => {
                 title: options.title,
                 content: options.content,
                 buttons: buttonItems.map(x => x.value),
-            }));
+            }), options.timeoutMs);
             const buttonClickedName = result.formData === null ? null : buttonItems[result.formData as number].name;
             return {
                 networkIdentifier: result.networkIdentifier,
                 formData: { buttonClickedName }
             };
         },
-        sendSimpleButtonsForm: async (options: { title: string, content: string, buttons: string[], networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+        sendSimpleButtonsForm: async (options: { title: string, content: string, buttons: string[], networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs?: number }): Promise<{
             networkIdentifier: NetworkIdentifier,
             formData: { buttonClickedName: string | null }
         }> => {
@@ -193,18 +204,18 @@ export const createFormsApi = () => {
                 title: options.title,
                 content: options.content,
                 buttons: buttonItems.map(x => ({ text: x })),
-            }));
+            }), options.timeoutMs);
             const buttonClickedName = result.formData === null ? null : buttonItems[result.formData as number];
             return {
                 networkIdentifier: result.networkIdentifier,
                 formData: { buttonClickedName }
             };
         },
-        sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+        sendModalForm: async (options: Parameters<typeof createModalForm>[0] & { networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs?: number }): Promise<{
             networkIdentifier: NetworkIdentifier,
             formData: { wasButton1Clicked: boolean }
         }> => {
-            const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options));
+            const result = await sendForm<'true' | 'null'>(options.networkIdentifier, createModalForm(options), options.timeoutMs);
             if (result.formData === 'true') {
                 return {
                     networkIdentifier: result.networkIdentifier,
@@ -216,7 +227,7 @@ export const createFormsApi = () => {
                 formData: { wasButton1Clicked: false },
             };
         },
-        sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string }): Promise<{
+        sendCustomForm: async <TContent extends { [name: string]: CustomFormItem }>(options: { title: string, content: TContent, networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs?: number }): Promise<{
             networkIdentifier: NetworkIdentifier,
             formData: null | CustomFormData<TContent>
         }> => {
@@ -225,7 +236,7 @@ export const createFormsApi = () => {
             const result = await sendForm<(null | boolean | number | string)[]>(options.networkIdentifier, createCustomForm({
                 title: options.title,
                 content: contentItems.map(x => x.value),
-            }));
+            }), options.timeoutMs);
 
             if (!result.formData) {
                 return {

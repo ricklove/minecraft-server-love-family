@@ -9,7 +9,7 @@ import { allSubjects, getSubject, StudyProblemAnswer, StudyProblemType, StudySub
 
 const REVIEW_RATIO = 0.9;
 
-const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string): Promise<null | StudyProblemAnswer> => {
+const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiType, networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs = 20 * 1000): Promise<null | StudyProblemAnswer> => {
     console.log('sendProblemForm', { playerName });
 
     // Improve distribution
@@ -97,6 +97,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
                 title: problem.formTitle,
                 content: problem.question,
                 buttons,
+                timeoutMs,
             });
             return response.formData.buttonClickedName;
         }
@@ -109,6 +110,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
                 questionLabel: { type: 'label', text: problem.question },
                 answerRaw: { type: 'input', text: `Answer` },
             },
+            timeoutMs,
         });
         return response.formData?.answerRaw.value ?? null;
     };
@@ -244,6 +246,9 @@ const sendAnswerResponse = (commandsApi: CommandsApiType, result: StudyProblemAn
 };
 
 const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: CommandsApiType, player: GamePlayerInfo, gameConsequences: GameConsequenceType) => {
+    console.warn('sendStudyFormWithResult', { time: new Date() });
+
+
     const playerState = gameState.playerStates.get(player.playerName);
     if (!playerState) {
         console.warn('playerState not found', { playerName: player.playerName });
@@ -290,6 +295,45 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
         wrongAnswers: playerState.wrongAnswers,
         problemQueue: playerState.problemQueue,
     });
+
+    return {
+        nextTimeMs: 5 * 1000,
+    };
+};
+
+const DEFAULT_PROBLEM_TIME = 20 * 1000;
+const MAX_ANSWER_TIME = DEFAULT_PROBLEM_TIME;
+
+export const sendStudyFormWithResult_afterTime = (formsApi: FormsApiType, commandsApi: CommandsApiType, player: GamePlayerInfo, gameConsequences: GameConsequenceType, timeMs = DEFAULT_PROBLEM_TIME) => {
+    console.log('sendStudyFormWithResult_afterTime', { time: new Date() });
+
+    const playerState = gameState.playerStates.get(player.playerName);
+    if (!playerState) {
+        console.warn('playerState not found', { playerName: player.playerName });
+        return;
+    }
+
+    // Skip is already pending
+    if (playerState.nextProblemTimerId) { return; }
+
+    playerState.nextProblemTimerId = setTimeout(async () => {
+        try {
+            const result = await sendStudyFormWithResult(formsApi, commandsApi, player, gameConsequences);
+            const { nextTimeMs = DEFAULT_PROBLEM_TIME } = result ?? {};
+
+            // Reset to enable next call
+            playerState.nextProblemTimerId = null;
+
+            // Next call
+            sendStudyFormWithResult_afterTime(formsApi, commandsApi, player, gameConsequences, nextTimeMs);
+        } catch (err) {
+            // This could occur on form timeout
+            console.warn('form error', { playerName: player.playerName });
+
+            // Reset to enable next call
+            playerState.nextProblemTimerId = null;
+        }
+    }, timeMs);
 };
 
 export const playerDataFileName = 'problemHistory.tsv';
@@ -317,6 +361,7 @@ const continueStudyGame = (
     newPlayers.forEach(async x => {
         const playerState: PlayerState = {
             isReady: false,
+            nextProblemTimerId: null,
             playerName: x.playerName,
             timeStart: new Date(),
             problemQueue: [],
@@ -395,11 +440,14 @@ const continueStudyGame = (
         });
 
     gameState.timeoutId = setTimeout(() => {
+
+        // Ensure player timers are going
         options.players.forEach(p => {
             const playerState = gameState.playerStates.get(p.playerName);
             if (!playerState || !playerState.isReady) { return; }
+            if (playerState.nextProblemTimerId) { return; }
 
-            sendStudyFormWithResult(formsApi, commandsApi, p, gameConsequences);
+            sendStudyFormWithResult_afterTime(formsApi, commandsApi, p, gameConsequences);
         });
 
         // Report
@@ -421,6 +469,7 @@ const stopStudyGame = () => {
 };
 
 type PlayerState = {
+    nextProblemTimerId: null | ReturnType<typeof setTimeout>,
     isReady: boolean,
     playerName: string,
     timeStart: Date,
