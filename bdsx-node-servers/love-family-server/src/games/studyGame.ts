@@ -486,6 +486,13 @@ const stopStudyGame = () => {
     console.log('stopStudyGame');
     clearTimeout(gameState.timeoutId);
     gameState.timeoutId = null;
+
+    for (const p of gameState.playerStates.values()) {
+        if (!p.nextProblemTimerId) { continue; }
+
+        clearTimeout(p.nextProblemTimerId);
+        p.nextProblemTimerId = null;
+    }
 };
 
 type PlayerState = {
