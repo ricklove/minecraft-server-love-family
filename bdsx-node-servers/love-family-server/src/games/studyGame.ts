@@ -43,6 +43,9 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const review = recent[Math.floor(recent.length * Math.random())];
         if (!review) { return; }
 
+        // Remove wrong answer (since it is being reviewed now)
+        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => x.key !== review.key);
+
         // Add to queue and run queue
         const reviewSubject = getSubject(review.subjectKey);
 
@@ -65,7 +68,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
 
         const includedSubjects = allSubjects.filter(x => playerState.selectedSubjectCategories.some(s => s.subjectKey === x.subjectKey));
         const randomSubject = includedSubjects[Math.floor(Math.random() * includedSubjects.length)] ?? allSubjects[0];
-        const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories);
+        const problem = randomSubject.getNewProblem(playerState.selectedSubjectCategories.filter(x => x.subjectKey === randomSubject.subjectKey));
 
         // Add to problem queue
         playerState.problemQueue.push(problem);
@@ -267,9 +270,26 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
 
     // If Correct
     if (result.wasCorrect) {
+        // Leave wrong answers (remove on create review problem)
+        const newWrongAnswers = playerState.wrongAnswers;
+
         // Remove correct answers
-        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => x.key !== result.problem.key);
-        playerState.problemQueue = playerState.problemQueue.filter(x => x.key !== result.problem.key);
+        //const newWrongAnswers = playerState.wrongAnswers.filter(x => x.key !== result.problem.key);
+        const newProblemQueue = playerState.problemQueue.filter(x => x.key !== result.problem.key);
+
+        if (playerState.wrongAnswers.length - newWrongAnswers.length > 1
+            || playerState.problemQueue.length - newProblemQueue.length > 1) {
+            console.log(`✅ Answer correct - Removed multiple items from review`, {
+                newWrongAnswers,
+                oldWrongAnswers: playerState.wrongAnswers,
+                newProblemQueue,
+                oldProblemQueue: playerState.problemQueue,
+            });
+        }
+
+        playerState.wrongAnswers = newWrongAnswers;
+        playerState.problemQueue = newProblemQueue;
+
 
         gameConsequences.onCorrect(player);
 
