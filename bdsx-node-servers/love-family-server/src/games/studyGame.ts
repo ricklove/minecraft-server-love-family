@@ -50,6 +50,8 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         const reviewSubject = getSubject(review.subjectKey);
 
         const reviewSequence = reviewSubject.getReviewProblemSequence(review);
+        // Mark as review problem
+        reviewSequence.forEach(x => x._isReviewProblem = true);
         playerState.problemQueue.push(...reviewSequence);
 
         console.log('getReviewProblem - added to start of problemQueue', { playerName: playerState.playerName, reviewSequence, problemQueue: playerState.problemQueue });
@@ -300,6 +302,12 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
             wrongAnswers: playerState.wrongAnswers,
             problemQueue: playerState.problemQueue,
         });
+
+        if (result.problem._isReviewProblem) {
+            return {
+                nextTimeMs: 10 * 1000,
+            };
+        }
 
         return;
     }

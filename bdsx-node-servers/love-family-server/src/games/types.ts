@@ -31,6 +31,7 @@ export type StudyProblemBase<TSubjectKey extends string> = {
     questionPreviewChat?: string,
     questionPreviewChatTimeMs?: number,
     correctAnswer: string,
+    _isReviewProblem?: boolean,
 };
 
 export type StudySubject<TProblem extends StudyProblemBase<TSubjectKey>, TSubjectKey extends string> = {
