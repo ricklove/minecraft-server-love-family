@@ -336,6 +336,9 @@ command.hook.on((command) => {
         // Stop everything
         stopActiveAnimation();
 
+        // Stop Form Timeout timers
+        formsApi.stop();
+
         // Make sure math game is shutdown
         studyGame.stopStudyGame();
     }

@@ -121,6 +121,7 @@ type ResponseData<T> = {
     packetId: string,
 };
 const formCallback = {} as { [formId: number]: (response: ResponseData<unknown>) => void; }
+const formTimeoutIds = [] as ReturnType<typeof setTimeout>[];
 
 const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object, timeoutMs?: number): Promise<ResponseData<TFormData>> => {
     let formId = Math.floor(Math.random() * 2147483647) + 1;
@@ -137,6 +138,7 @@ const sendForm = <TFormData>(networkIdentifier: NetworkIdentifier, form: object,
             wasTimedOut = true;
             reject('timeout');
         }, timeoutMs) : null;
+        if (timeoutId) { formTimeoutIds.push(timeoutId); }
 
         formCallback[formId] = (x) => {
             if (wasTimedOut) { return; }
@@ -177,6 +179,11 @@ netevent.raw(PacketId.ModalFormResponse).on((ptr, _size, networkIdentifier, pack
 export const createFormsApi = () => {
 
     return {
+        stop: () => {
+            for (const x of formTimeoutIds) {
+                clearTimeout(x);
+            }
+        },
         sendSimpleForm: async  <TContent extends { [name: string]: FormButtonItem }>(options: { title: string, content: string, buttons: TContent, networkIdentifier: NetworkIdentifier, playerName: string, timeoutMs?: number }): Promise<{
             networkIdentifier: NetworkIdentifier,
             formData: { buttonClickedName: keyof TContent | null }
