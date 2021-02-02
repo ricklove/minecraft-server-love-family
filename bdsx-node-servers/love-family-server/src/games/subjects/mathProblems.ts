@@ -96,7 +96,7 @@ const getNewProblem = (selectedCategories: { categoryKey: string }[]) => {
 
     if (operator === '^') {
         const a = (Math.random() < 0.1 ? -1 : 1) * Math.floor(Math.random() * (MAX_MULTIPLICATION + 1));
-        const b = a > 3 ? 2
+        const b = Math.abs(a) > 3 ? 2
             : Math.floor(Math.random() * (3 + 1));
 
         const problem = calculateProblem({ x: a, y: b, operator });
