@@ -17,6 +17,8 @@ import { calculateMapPosition } from './graphing/map';
 import { showEntityDiffReport, showEntityPositionReport } from './tools/findMobs';
 import { test_graphProgressReport } from './games/progressReport';
 import { loadAtRuntime } from './testing/dynamicScripting';
+import clearModule from 'clear-module';
+import { createBlockService } from './structures/blockService';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -297,6 +299,41 @@ command.net.on((ev) => {
 
     if (ev.command.toLowerCase().startsWith('/test dynamic')) {
         loadAtRuntime();
+        return CANCEL;
+    }
+
+    if (ev.command.toLowerCase().startsWith('/generate')) {
+        const commandExample = `/generate [structureName]`;
+
+        const parts = ev.command.split(' ').map(x => x.trim()).filter(x => x);
+        const structureName = parts[1];
+
+        if (!structureName) {
+            commandsApi.sendMessage(playerName, `Missing structureName '${structureName}'. Example: ${commandExample}`);
+            return CANCEL;
+        }
+
+        const playerPosition = system.getComponent(entity, MinecraftComponent.Position);
+        if (!playerPosition) {
+            console.warn(`missing playerPosition`);
+            return CANCEL;
+        }
+
+        const pos = playerPosition.data;
+        const blockService = createBlockService({ executeCommand: x => system.executeCommand(x, () => { }) });
+
+        (async () => {
+            clearModule('./structures/structures');
+            const { generateStructure, structureNames } = await import('./structures/structures')
+            const sName = structureName as typeof structureNames[0];
+            if (!structureNames.includes(sName)) {
+                commandsApi.sendMessage(playerName, `Unknown structureName '${structureName}'. StructureNames: ${structureNames.join(',')}`);
+                return CANCEL;
+            }
+
+            generateStructure(blockService, sName, { origin: pos });
+        })();
+
         return CANCEL;
     }
 });
