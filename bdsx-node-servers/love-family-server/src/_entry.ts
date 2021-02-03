@@ -16,6 +16,7 @@ import { runBubbleSort2 } from './sorting/bubbleSort2';
 import { calculateMapPosition } from './graphing/map';
 import { showEntityDiffReport, showEntityPositionReport } from './tools/findMobs';
 import { test_graphProgressReport } from './games/progressReport';
+import { loadAtRuntime } from './testing/dynamicScripting';
 
 const system = server.registerSystem(0, 0);
 const commandsApi = createCommandsApi(system);
@@ -291,6 +292,11 @@ command.net.on((ev) => {
     }
     if (ev.command.toLowerCase().startsWith('/report')) {
         showEntityPositionReport(system);
+        return CANCEL;
+    }
+
+    if (ev.command.toLowerCase().startsWith('/test dynamic')) {
+        loadAtRuntime();
         return CANCEL;
     }
 });
