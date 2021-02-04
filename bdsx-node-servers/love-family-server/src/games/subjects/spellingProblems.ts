@@ -53,9 +53,16 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
 
             if (categoryBaseKey === 'next-letter') {
                 const nextLetter = word[startLength];
-                const nextLetterWrongChoices = entry.mispellings.map(x => {
+                const nextLetterWrongChoices_fromMispellings = entry.mispellings.map(x => {
                     return x[startLength];
                 });
+
+                const nextLetterWrongChoices_vowels = `aeiou`.split('');
+
+                const nextLetterWrongChoices = [
+                    ...nextLetterWrongChoices_fromMispellings,
+                    ...nextLetterWrongChoices_vowels,
+                ];
 
                 return {
                     correctAnswer: nextLetter,
@@ -96,8 +103,8 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
             question: revealPart,
             questionPreview: categoryBaseKey === 'chat-only' || categoryBaseKey === 'next-letter' ? undefined : word,
             questionPreviewTimeMs: 3000,
-            questionPreviewChat: word,
-            questionPreviewChatTimeMs: 0,
+            questionPreviewChat: `§k${word}§r`,
+            questionPreviewChatTimeMs: 1000,
             correctAnswer,
             word,
             wrongChoices,
@@ -121,12 +128,12 @@ export const createSpellingSubject = (): StudySubject<SpellingProblemType, 'spel
         evaluateAnswer: (p, answer) => ({ isCorrect: p.correctAnswer === answer, responseMessage: p.correctAnswer === answer ? undefined : `${p.word} = ${p.correctAnswer}` }),
         getReviewProblemSequence: (p) => [
             // Same word with decreasing start length: i.e: ___t, ___rt, __art, _tart, start
-            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, p.categoryBaseKey, p.levelKey, p.word.length - 1 - i, 'decreasing')),
+            ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, 'chat-only', p.levelKey, p.word.length - 1 - i, 'decreasing')),
             // Same word letter by letter
             ...[...new Array(p.word.length)].map((x, i) => getProblemFromWord(p.word, 'next-letter', p.levelKey, i, 'next-letter')),
             // ...[...new Array(p.word.length - 1)].map((x, i) => getProblemFromWord(p.word, i +1)),
             // Similar words
-            ...p.wordGroup.words.map(x => getProblemFromWord(x, p.categoryBaseKey, p.levelKey)).filter(x => x?.word !== p.word),
+            ...p.wordGroup.words.map(x => getProblemFromWord(x, 'chat-only', p.levelKey)).filter(x => x?.word !== p.word),
             // Finally the original problem again
             p,
         ].filter(x => x).map(x => x!),

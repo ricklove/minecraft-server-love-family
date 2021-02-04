@@ -23,10 +23,11 @@ export const createGameConsequences = (system: IVanillaServerSystem): GameConseq
             // system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${pos.data.y + 0} ${pos.data.z - 1}`, () => { });
 
             // Hit bedrock with lightning (not player - just for sound and light)
-            system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${0} ${pos.data.z + 1}`, () => { });
-            system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${0} ${pos.data.z - 1}`, () => { });
-            system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${0} ${pos.data.z + 1}`, () => { });
-            system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${0} ${pos.data.z - 1}`, () => { });
+            const y = pos.data.y > 16 ? 0 : 256;
+            system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${y} ${pos.data.z + 1}`, () => { });
+            system.executeCommand(`/summon lightning_bolt ${pos.data.x + 1} ${y} ${pos.data.z - 1}`, () => { });
+            system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${y} ${pos.data.z + 1}`, () => { });
+            system.executeCommand(`/summon lightning_bolt ${pos.data.x - 1} ${y} ${pos.data.z - 1}`, () => { });
 
             // Random effect
             const badEffects = [
