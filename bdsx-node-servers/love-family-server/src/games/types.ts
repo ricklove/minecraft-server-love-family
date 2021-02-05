@@ -31,7 +31,14 @@ export type StudyProblemBase<TSubjectKey extends string> = {
     questionPreviewChat?: string,
     questionPreviewChatTimeMs?: number,
     correctAnswer: string,
+    isTyping?: boolean,
     _isReviewProblem?: boolean,
+    _reviewProblemSource?: StudyProblemType,
+};
+
+export type StudyProblemReviewState = {
+    problem: StudyProblemType,
+    reviewLevel: number,
 };
 
 export type StudySubject<TProblem extends StudyProblemBase<TSubjectKey>, TSubjectKey extends string> = {
@@ -40,6 +47,6 @@ export type StudySubject<TProblem extends StudyProblemBase<TSubjectKey>, TSubjec
     getNewProblem: (selectedCategories: { categoryKey: string }[]) => TProblem,
     getWrongChoices: (problem: TProblem) => Set<string>,
     evaluateAnswer: (problem: TProblem, answer: string | null | undefined) => { isCorrect: boolean, responseMessage?: string },
-    getReviewProblemSequence: (problem: TProblem) => TProblem[],
+    getReviewProblemSequence: (problem: TProblem, reviewLevel: number) => TProblem[],
     getCategories: () => { categoryKey: string, categoryTitle: string }[],
 };

@@ -1,28 +1,57 @@
+import { englishWords } from "./englishFrequentWords";
 
 export const getSpellingEntries = (): { word: string, mispellings: string[], wordGroup: { words: string[] } }[] => {
+
+    const wordFrequency = englishWords.getMostFrequentWords3000().map((x, i) => {
+        return {
+            word: x,
+            frequencyIndex: i,
+        };
+    });
+    const wordFrequencyMap = new Map(wordFrequency.map(x => [x.word, x]));
 
     const wordGroups = getWordGroups();
 
     const doc = spellingDoc;
     const lines = doc.split(`\n`).map(x => x.trim()).filter(x => x);
-    const problems = lines.map(line => {
+    const spellingList = lines.map((line, i) => {
         const parts = line.split(`=`);
         const word = parts[0].trim();
         const mispellings = parts[1].split(` `).map(x => x.trim()).filter(x => x);
+        return {
+            word,
+            mispellings,
+            spellingListIndex: i,
+        };
+    });
+    const spellingListMap = new Map(spellingList.map(x => [x.word, x]));
 
+    const allWords = [...new Set([...wordFrequencyMap.keys(), ...spellingListMap.keys()])]
+    const problems = allWords.map(x => {
+        const word = x;
+        const frequencyIndex = wordFrequencyMap.get(x)?.frequencyIndex ?? wordFrequencyMap.size;
+        const spellingListEntry = spellingListMap.get(x);
+        const spellingListIndex = spellingListEntry?.spellingListIndex ?? spellingListMap.size;
+        const mispellings = spellingListEntry?.mispellings ?? [];
         const wordGroup = wordGroups.find(x => x.words.some(w => w === word)) ?? { words: [] };
-        return { word, mispellings, wordGroup };
+
+        const order = 0.6 * spellingListIndex + 0.4 * frequencyIndex;
+
+        return { word, mispellings, wordGroup, order, frequencyIndex, spellingListIndex };
     });
 
-    // Ensure no mispelling in a valid word - OK
-    const debug_actualWordsInMispellings = [] as string[];
-    const allRealWords = new Set(problems.map(x => x.word));
-    problems.forEach(x => {
-        debug_actualWordsInMispellings.push(...x.mispellings.filter(m => allRealWords.has(m)));
-        x.mispellings = x.mispellings.filter(m => !allRealWords.has(m));
-    });
+    problems.sort((a, b) => a.order - b.order);
 
-    console.log('getSpellingEntries', { debug_actualWordsInMispellings });
+    console.log('problemOrder', { words: problems.map(x => x.word).join(', ') });
+
+    // // Ensure no mispelling in a valid word - OK
+    // const debug_actualWordsInMispellings = [] as string[];
+    // const allRealWords = new Set(problems.map(x => x.word));
+    // problems.forEach(x => {
+    //     debug_actualWordsInMispellings.push(...x.mispellings.filter(m => allRealWords.has(m)));
+    //     x.mispellings = x.mispellings.filter(m => !allRealWords.has(m));
+    // });
+    // console.log('getSpellingEntries', { debug_actualWordsInMispellings });
 
     return problems;
 };

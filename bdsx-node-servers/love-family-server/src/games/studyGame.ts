@@ -5,7 +5,7 @@ import { delay } from "../utils/delay";
 import { FileWriterServiceType } from "../utils/fileWriter";
 import { GameConsequenceType, GamePlayerInfo } from "./gameConsequences";
 import { progressReport, RunningAverageEntry } from "./progressReport";
-import { allSubjects, getSubject, StudyProblemAnswer, StudyProblemType, StudySubject } from "./types";
+import { allSubjects, getSubject, StudyProblemAnswer, StudyProblemReviewState, StudyProblemType, StudySubject } from "./types";
 
 const REVIEW_RATIO = 0.9;
 
@@ -34,27 +34,35 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
 
     const getReviewProblem = () => {
 
-        if (playerState.wrongAnswers.length <= 0) { return; }
+        // Remove reviews that are at mastery level
+        playerState.reviewProblems = playerState.reviewProblems.filter(x => x.reviewLevel < 3);
+
+        if (playerState.reviewProblems.length <= 0) { return; }
         // Chance for new problem
-        if (playerState.wrongAnswers.length < 3 && Math.random() > REVIEW_RATIO) { return; }
+        if (playerState.reviewProblems.length < 3 && Math.random() > REVIEW_RATIO) { return; }
 
-        const w = playerState.wrongAnswers;
-        const recent = w.slice(w.length - 5, w.length);
-        const review = recent[Math.floor(recent.length * Math.random())];
-        if (!review) { return; }
-
-        // Remove wrong answer (since it is being reviewed now)
-        playerState.wrongAnswers = playerState.wrongAnswers.filter(x => x.key !== review.key);
+        const lowestReviewLevel = Math.min(...playerState.reviewProblems.map(x => x.reviewLevel));
+        const w = playerState.reviewProblems.filter(x => x.reviewLevel === lowestReviewLevel);
+        const reviewProblem = w[0];
+        if (!reviewProblem) { return; }
 
         // Add to queue and run queue
-        const reviewSubject = getSubject(review.subjectKey);
+        const reviewSubject = getSubject(reviewProblem.problem.subjectKey);
+        const reviewSequence = reviewSubject.getReviewProblemSequence(reviewProblem.problem, reviewProblem.reviewLevel);
 
-        const reviewSequence = reviewSubject.getReviewProblemSequence(review);
-        // Mark as review problem
+        // Increase review level (it will reset on wrong answer)
+        reviewProblem.reviewLevel++;
+
+        // Mark sequence as review problems
         reviewSequence.forEach(x => x._isReviewProblem = true);
         playerState.problemQueue.push(...reviewSequence);
 
-        console.log('getReviewProblem - added to start of problemQueue', { playerName: playerState.playerName, reviewSequence, problemQueue: playerState.problemQueue });
+        console.log('getReviewProblem - sequence added', {
+            playerName: playerState.playerName,
+            reviewSequence,
+            reviewProblems: playerState.reviewProblems.map(x => ({ reviewLevel: x.reviewLevel, ...x.problem })),
+            // problemQueue: playerState.problemQueue,
+        });
 
         // Run as queued problem
         return getQueuedProblem();
@@ -83,7 +91,7 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
     const problemSubject = getSubject(problem.subjectKey);
 
     const sendProblemForm = async () => {
-        const formType = 'choices';
+        const formType = problem.isTyping ? 'input' : 'choices';
         if (formType === 'choices') {
 
             const wrongChoicesSet = problemSubject.getWrongChoices(problem);
@@ -121,9 +129,22 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
     };
 
     // For Text to speech
+    let textToSpeechRepeaterId = null as null | ReturnType<typeof setInterval>;
     if (problem.questionPreviewChat) {
-        commandsApi.sendMessage(playerName, problem.questionPreviewChat);
+
+        const chatTts = problem.questionPreviewChat;
+        commandsApi.sendMessage(playerName, chatTts);
         await delay(problem.questionPreviewChatTimeMs ?? 0);
+
+        let repeatCount = 0;
+        textToSpeechRepeaterId = setInterval(() => {
+            if (repeatCount > 5) {
+                clearInterval(textToSpeechRepeaterId!);
+                return;
+            }
+            commandsApi.sendMessage(playerName, chatTts);
+            repeatCount++;
+        }, 3000);
     }
 
     // Title Display
@@ -132,13 +153,13 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         await delay(problem.questionPreviewTimeMs);
     }
 
-    const sendProblemFormWithReissueOnAccidentalAnswer = async () => {
+    const sendProblemFormWithReissueOnAccidentalAnswer = async (): Promise<StudyProblemAnswer> => {
 
         const timeSent = Date.now();
         const answerRaw = await sendProblemForm();
         const time = new Date();
         const timeToAnswerMs = Date.now() - timeSent;
-        const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw);
+        const { isCorrect, responseMessage } = problemSubject.evaluateAnswer(problem, answerRaw?.trim());
 
         // Re-issue question on accidental tap
         if (answerRaw == null) {
@@ -161,7 +182,10 @@ const sendProblemForm = async (formsApi: FormsApiType, commandsApi: CommandsApiT
         };
     };
 
-    return sendProblemFormWithReissueOnAccidentalAnswer();
+    const result = await sendProblemFormWithReissueOnAccidentalAnswer();
+
+    if (textToSpeechRepeaterId) { clearInterval(textToSpeechRepeaterId); }
+    return result;
 };
 
 const getRunningAverageReport = (playerState: null | PlayerState) => {
@@ -273,23 +297,23 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
     // If Correct
     if (result.wasCorrect) {
         // Leave wrong answers (remove on create review problem)
-        const newWrongAnswers = playerState.wrongAnswers;
+        const newReviewProblems = playerState.reviewProblems;
 
         // Remove correct answers
-        //const newWrongAnswers = playerState.wrongAnswers.filter(x => x.key !== result.problem.key);
+        //const newReviewProblems = playerState.reviewProblems.filter(x => x.key !== result.problem.key);
         const newProblemQueue = playerState.problemQueue.filter(x => x.key !== result.problem.key);
 
-        if (playerState.wrongAnswers.length - newWrongAnswers.length > 1
-            || playerState.problemQueue.length - newProblemQueue.length > 1) {
-            console.log(`✅ Answer correct - Removed multiple items from review`, {
-                newWrongAnswers,
-                oldWrongAnswers: playerState.wrongAnswers,
-                newProblemQueue,
-                oldProblemQueue: playerState.problemQueue,
-            });
-        }
+        // if (playerState.reviewProblems.length - newReviewProblems.length > 1
+        //     || playerState.problemQueue.length - newProblemQueue.length > 1) {
+        //     console.log(`✅ Answer correct - Removed multiple items from review`, {
+        //         newReviewProblems,
+        //         oldReviewProblems: playerState.reviewProblems,
+        //         newProblemQueue,
+        //         oldProblemQueue: playerState.problemQueue,
+        //     });
+        // }
 
-        playerState.wrongAnswers = newWrongAnswers;
+        playerState.reviewProblems = newReviewProblems;
         playerState.problemQueue = newProblemQueue;
 
 
@@ -299,7 +323,7 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
             playerName: player.playerName,
             result,
             wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time} ${x.timeToAnswerMs} ${x.problem.key}!=${x.answerRaw}`),
-            wrongAnswers: playerState.wrongAnswers,
+            reviewProblems: playerState.reviewProblems,
             problemQueue: playerState.problemQueue,
         });
 
@@ -313,14 +337,23 @@ const sendStudyFormWithResult = async (formsApi: FormsApiType, commandsApi: Comm
     }
 
     // If Wrong
-    playerState.wrongAnswers.push(result.problem);
+    const problemToReview = result.problem._reviewProblemSource ?? result.problem;
+    const inReview = playerState.reviewProblems.find(x => x.problem.key === problemToReview.key);
+    if (inReview) {
+        // If wrong again, go back to level 0
+        inReview.reviewLevel = 0;
+    } else {
+        // On first review, start with level 1
+        playerState.reviewProblems.push({ problem: problemToReview, reviewLevel: 1 });
+    }
+
     gameConsequences.onWrong(player);
 
     console.log(`Wrong Answer`, {
         playerName: player.playerName,
         result,
         wrongHistory: playerState.answerHistory.filter(x => !x.wasCorrect).map(x => `${x.time} ${x.timeToAnswerMs} ${x.problem.key} != ${x.answerRaw}`),
-        wrongAnswers: playerState.wrongAnswers,
+        reviewProblems: playerState.reviewProblems,
         problemQueue: playerState.problemQueue,
     });
 
@@ -356,7 +389,7 @@ export const sendStudyFormWithResult_afterTime = (formsApi: FormsApiType, comman
             sendStudyFormWithResult_afterTime(formsApi, commandsApi, player, gameConsequences, nextTimeMs);
         } catch (err) {
             // This could occur on form timeout
-            console.warn('form error', { playerName: player.playerName });
+            console.warn('form error - timeout?', { playerName: player.playerName });
 
             // Reset to enable next call
             playerState.nextProblemTimerId = null;
@@ -393,7 +426,7 @@ const continueStudyGame = (
             playerName: x.playerName,
             timeStart: new Date(),
             problemQueue: [],
-            wrongAnswers: [],
+            reviewProblems: [],
             answerHistory: [],
             selectedSubjectCategories: [],
             writeAnswerToFile: options.fileWriterService ? createPlayerFileWriter(options.fileWriterService, x.playerName, () => getRunningAverageReport(playerState)!) : undefined,
@@ -509,7 +542,7 @@ type PlayerState = {
     playerName: string,
     timeStart: Date,
     problemQueue: StudyProblemType[],
-    wrongAnswers: StudyProblemType[],
+    reviewProblems: StudyProblemReviewState[],
     answerHistory: StudyProblemAnswer[],
     selectedSubjectCategories: {
         subjectKey: string,
