@@ -1,11 +1,13 @@
 import { createMathSubject, MathProblemType } from "./subjects/mathProblems";
 import { createSpellingSubject, SpellingProblemType } from "./subjects/spellingProblems";
+import { createSpanishSubject, SpanishProblemType } from "./subjects/spanishProblems";
 
 export const allSubjects = [
     createMathSubject(),
     createSpellingSubject(),
+    createSpanishSubject(),
 ];
-export type StudyProblemType = MathProblemType | SpellingProblemType;
+export type StudyProblemType = MathProblemType | SpellingProblemType | SpanishProblemType;
 export const getSubject = (subjectKey: StudyProblemType['subjectKey']): StudySubject<StudyProblemType, typeof subjectKey> => {
     return allSubjects.find(s => s.subjectKey === subjectKey) ?? allSubjects[0];
 };
