@@ -8,6 +8,7 @@ type ProgressReportEntry = {
     responseMessage?: string | null,
     problem: {
         subjectKey: string,
+        categoryKey: string;
         key: string,
         question: string,
     },
@@ -18,6 +19,7 @@ type ProgressReportEntry = {
 
 export type RunningAverageEntry = {
     subjectKey: string;
+    categoryKey: string;
     countCorrect: number;
     countTotal: number;
     averageTimeMs: number;
@@ -25,7 +27,7 @@ export type RunningAverageEntry = {
 
 export const progressReport = {
     toString_answerLine: (a: ProgressReportEntry) => {
-        return `${a.wasCorrect ? 'correct' : 'wrong'} \t${a.problem.subjectKey} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.problem.question} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${progressReport.toString_runningAverage(a.runningAverage)} \t${a.time}\n`;
+        return `${a.wasCorrect ? 'correct' : 'wrong'} \t${a.problem.subjectKey}:${a.problem.categoryKey} \t${(a.timeToAnswerMs / 1000).toFixed(1)}secs \t${a.problem.key} \t${a.problem.question} \t${a.wasCorrect ? '==' : '!='} \t${a.answerRaw} \tRunAve=${progressReport.toString_runningAverage(a.runningAverage)} \t${a.time}\n`;
     },
     parse_answerLine: (line: string): null | ProgressReportEntry => {
         const parsed = /^(correct|wrong) \t([^\t]+) \t([0-9\.]+)secs \t([^\t]+) \t([^\t]+) \t(?:==|!=) \t([^\t]+) \tRunAve=([^\t]+) \t([^\t]+)$/.exec(line);
@@ -33,13 +35,15 @@ export const progressReport = {
 
         // console.log('parse_answerLine', { parsed });
 
-        const [whole, correctOrWrong, subjectKey, timeToAnswerSecs, problemKey, question, answerRaw, runAverageText, time] = parsed;
+        const [whole, correctOrWrong, subjectCategoryKey, timeToAnswerSecs, problemKey, question, answerRaw, runAverageText, time] = parsed;
+        const [subjectKey, categoryKey] = subjectCategoryKey.split(':');
 
         return {
             ...{ _raw: line, _parsed: parsed },
             wasCorrect: correctOrWrong === 'correct',
             problem: {
                 subjectKey,
+                categoryKey,
                 key: problemKey,
                 question,
             },
@@ -50,21 +54,22 @@ export const progressReport = {
         };
     },
 
-    toString_runningAverage_short: ({ subjectKey, countCorrect, countTotal: count, averageTimeMs }: RunningAverageEntry) => {
-        return `${subjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`;
+    toString_runningAverage_short: ({ subjectKey, categoryKey, countCorrect, countTotal: count, averageTimeMs }: RunningAverageEntry) => {
+        return `${subjectKey}:${categoryKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}%`;
     },
-    toString_runningAverage: ({ subjectKey, countCorrect, countTotal: count, averageTimeMs }: RunningAverageEntry) => {
-        return `runAve ${subjectKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(averageTimeMs / 1000).toFixed(1)}secs`;
+    toString_runningAverage: ({ subjectKey, categoryKey, countCorrect, countTotal: count, averageTimeMs }: RunningAverageEntry) => {
+        return `runAve ${subjectKey}:${categoryKey}: ${countCorrect}/${count} ${(Math.floor(100 * (countCorrect / count)) + '').padStart(2, ' ')}% ${(averageTimeMs / 1000).toFixed(1)}secs`;
     },
     parse_runningAverage: (line: string): null | RunningAverageEntry => {
-        const parsed = /^runAve ([^:]+): ([0-9]+)\/([0-9]+) [0-9]+% ([0-9\.]+)secs$/.exec(line);
+        const parsed = /^runAve ([^:]+(:[^ ][^:]+)?): ([0-9]+)\/([0-9]+) [0-9]+% ([0-9\.]+)secs$/.exec(line);
         if (!parsed) { return null; }
 
-        const [whole, subjectKey, countCorrect, count, averageTimeMs] = parsed;
+        const [whole, subjectKey, categoryKey, countCorrect, count, averageTimeMs] = parsed;
 
         return {
             ...{ _raw: line, _parsed: parsed },
             subjectKey,
+            categoryKey,
             countCorrect: parseInt(countCorrect, 10) || 0,
             countTotal: parseInt(count, 10) || 0,
             averageTimeMs: parseInt(averageTimeMs, 10) || 0,
