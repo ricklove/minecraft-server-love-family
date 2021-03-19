@@ -6,7 +6,8 @@
   "main": "out/index",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "start": "npx bdsx ./"
   },
   "keywords": [],
   "author": "YOU",

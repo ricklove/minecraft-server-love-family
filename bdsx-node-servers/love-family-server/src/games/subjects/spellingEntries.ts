@@ -42,7 +42,7 @@ export const getSpellingEntries = (): { word: string, mispellings: string[], wor
 
     problems.sort((a, b) => a.order - b.order);
 
-    console.log('problemOrder', { words: problems.map(x => x.word).join(', ') });
+    // console.log('problemOrder', { words: problems.map(x => x.word).join(', ') });
 
     // // Ensure no mispelling in a valid word - OK
     // const debug_actualWordsInMispellings = [] as string[];
