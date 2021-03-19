@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "start": "bash ./build.sh && ../bdsx/bdsx.bat"
+    "start": "run.bat"
   },
   "keywords": [],
   "author": "YOU",
