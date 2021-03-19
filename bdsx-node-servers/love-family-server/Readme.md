@@ -23,6 +23,14 @@ Alternatively, edit the world bdt table and set these manually.
 
 ----
 
+References:
+
+- https://bedrock.dev/docs/stable/Scripting
+
+
+
+----
+
 # Todo
 
 ## Math Game
@@ -52,7 +60,7 @@ Alternatively, edit the world bdt table and set these manually.
 
 ## Spelling Problem Types
 
-- [ ] Missing Letters
+- [x] Missing Letters
     - Prompt with whole word (for 1 sec): 
         - Spell `snake`
     - Display: 
@@ -62,11 +70,6 @@ Alternatively, edit the world bdt table and set these manually.
         - `__ack`
         - `__ach`
         - `__ak`
-    - [ ] Option 2: Choose whole word:
-        - `snake`
-        - `snack`
-        - `snach`
-        - `snak`
 - [x] Problem sequence to complete word (with only initial prompt)
     - Prompt with whole word (for 1 sec): 
         - Spell `snake`
@@ -84,6 +87,8 @@ Alternatively, edit the world bdt table and set these manually.
         - `__ack`
         - `__ach`
         - `__ak`
+- [x] Typing
+- [x] Test to speech
     
 
 ## Formula Memorization
@@ -95,11 +100,11 @@ Alternatively, edit the world bdt table and set these manually.
 
 ## Spelling
 
-- [ ] Add spelling dictionary
+- [x] Add spelling dictionary
 - Game modes
-    - [ ] Multiple Choice (Choose the correcly spelled word)
-    - [ ] Multiple Choice Type (Use buttons to spell the word one letter at a time)
-    - [ ] Type the word (show the word for 3 seconds, then type)
+    - [x] Multiple Choice (Choose the correcly spelled word)
+    - [x] Multiple Choice Type (Use buttons to spell the word one letter at a time)
+    - [x] Type the word (show the word for 3 seconds, then type)
 
 
 # Companion App

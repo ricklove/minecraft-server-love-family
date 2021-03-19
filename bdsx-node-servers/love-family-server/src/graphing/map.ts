@@ -1,4 +1,6 @@
-export const calculateMapPosition = (containingPosition: VectorXYZ): { topLeft: VectorXYZ, bottomRight: VectorXYZ } => {
+import { Vector3 } from "../utils/vector";
+
+export const calculateMapPosition = (containingPosition: Vector3): { topLeft: Vector3, bottomRight: Vector3 } => {
     // TODO: Zoom level > 0
 
     // Assumes Zoom level 0: 0,0 at center of origin map (block aligned 0-15)
