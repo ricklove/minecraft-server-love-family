@@ -9,6 +9,7 @@ export const readFileText = async (filePath: string) => {
 const createAppendFileWriter = (filePath: string) => {
 
     return {
+        // getPlayerFilePath: () => filePath,
         appendToFile: async (text: string) => {
             console.log('appendToFile', { filePath, text });
 
