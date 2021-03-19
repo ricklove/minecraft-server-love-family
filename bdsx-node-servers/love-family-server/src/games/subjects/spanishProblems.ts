@@ -75,7 +75,7 @@ export const createSpanishSubject = (): StudySubject<SpanishProblemType, 'spanis
             question: question,
             questionPreview: question,
             questionPreviewTimeMs: 2000,
-            questionPreviewChat: `§k${question}§r`,
+            // questionPreviewChat: `§k${question}§r`,
             questionPreviewChatTimeMs: 2000,
             correctAnswer: correctAnswer,
             wrongChoices,
