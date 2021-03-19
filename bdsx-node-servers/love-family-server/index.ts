@@ -1,9 +1,8 @@
 /// <reference types="minecraft-scripting-types-server" />
 
-// call test
 import './test';
 
-// call examples
-import './src/_entry';
 
-// this program will die at './examples' module
+import { setup } from './src/_entry';
+import { createServices } from './src/bdsx-dependencies/dependencies';
+setup(createServices());
