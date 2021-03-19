@@ -1,5 +1,5 @@
 
-type SubscriptionCallback<TEventData> = (data: TEventData) => void;
+export type SubscriptionCallback<TEventData> = (data: TEventData) => void;
 export class Subscription<TEventData> {
     private _subscribers: (null | SubscriptionCallback<TEventData>)[] = [];
 

@@ -1,0 +1,3 @@
+[submodule "bdsx-node-servers/bdsx"]
+	path = bdsx-node-servers/bdsx
+	url = https://github.com/ricklove/bdsx.git

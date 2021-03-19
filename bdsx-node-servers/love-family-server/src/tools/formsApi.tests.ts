@@ -1,4 +1,4 @@
-import { NetworkIdentifier } from "bdsx";
+import { NetworkIdentifier } from "../types";
 import { CommandsApiType } from "./commandsApi";
 import { FormsApiType } from "./formsApi";
 
@@ -73,13 +73,13 @@ export const sendFormExample_custom = async (formsApi: FormsApiType, commandsApi
 
     const { favoriteColor, compliment, leggoMyEggo } = response.formData;
 
-    commandsApi.sendMessage(playerName, `Here is your results: 
+    commandsApi.sendMessage(playerName, `Here is your results:
 
         Your favorite color is ${favoriteColor.value}.
-    
+
         You told me, "${compliment.value}"...   Thanks! I appreciate it!
-    
+
         You will${leggoMyEggo.value ? '' : ' NOT'} leggo my eggo.
-    
+
     `.split('\n').map(x => x.trim()).join('\n'));
 };
