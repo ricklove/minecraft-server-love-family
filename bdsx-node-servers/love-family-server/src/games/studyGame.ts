@@ -480,14 +480,16 @@ const continueStudyGame = (
                     playerName: playerState.playerName,
                     title: 'Choose Subjects',
                     content: {
-                        questionLabel: { type: 'label', text: 'Select your subjects below:' },
-                        // a: { type: 'toggle', text: '' },
-                        ...catObj
+                        allLabel: { type: 'label', text: 'Select all:' },
+                        all: { type: 'toggle', text: `All categories` },
+                        questionLabel: { type: 'label', text: 'Select your categories below:' },
+                        ...catObj,
                     },
                 });
 
                 const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
-                const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
+                const selectedSubjectCategories = formDataResult.all ? subjectCategories
+                    : subjectCategories.filter(x => formDataResult[x.categoryKey].value);
                 allSelectedSubjectCategories.push(...selectedSubjectCategories.map(x => ({ subjectKey: s.subjectKey, categoryKey: x.categoryKey })));
             }
 
