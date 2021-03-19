@@ -11,6 +11,10 @@ A math question will popup every 20 seconds, answer it right or else!
 
 # Setup
 
+## Setup bdsx Sub module
+
+- `git submodule update --init --recursive`
+
 ## Enable Cheats
 
 In the console run this to enable admin controls:
