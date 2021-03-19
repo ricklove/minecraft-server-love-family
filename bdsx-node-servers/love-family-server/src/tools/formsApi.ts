@@ -1,4 +1,4 @@
-import { NetworkIdentifier } from "../bdsx-dependencies/types";
+import { NetworkIdentifier } from "../types";
 
 // Credits: Thanks for these coders for their great work!
 // Based on: https://github.com/randommouse/bdsx-scripts/blob/main/formsapi.ts @☮madeofstown

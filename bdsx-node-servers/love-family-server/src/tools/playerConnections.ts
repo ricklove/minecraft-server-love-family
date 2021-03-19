@@ -1,5 +1,5 @@
 // import { NetworkIdentifier, netevent, PacketId, createPacket, sendPacket, nethook } from "bdsx";
-import { NetworkIdentifier } from "../bdsx-dependencies/types";
+import { NetworkIdentifier } from "../types";
 import { Subscription, SubscriptionCallback } from "../utils/subscriptions";
 
 // const call_simple = () => {

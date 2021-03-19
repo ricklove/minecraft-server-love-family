@@ -1,0 +1,1 @@
+cp -R ./src ../bdsx/love-family-server

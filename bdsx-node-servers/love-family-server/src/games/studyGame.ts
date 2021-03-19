@@ -1,4 +1,4 @@
-import { NetworkIdentifier } from "../bdsx-dependencies/types";
+import { NetworkIdentifier } from "../types";
 import { CommandsApiType } from "../tools/commandsApi";
 import { FormsApiType } from "../tools/formsApi";
 import { delay } from "../utils/delay";

@@ -1,4 +1,4 @@
-import { NetworkIdentifier } from "../bdsx-dependencies/types";
+import { NetworkIdentifier } from "../types";
 
 export type GamePlayerInfo = { networkIdentifier: NetworkIdentifier, playerName: string, entity: IEntity };
 export type GameConsequenceType = {

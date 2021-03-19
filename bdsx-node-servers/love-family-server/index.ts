@@ -4,5 +4,5 @@ import './test';
 
 
 import { setup } from './src/_entry';
-import { createServices } from './src/bdsx-dependencies/dependencies';
+import { createServices } from './bdsx-dependencies/dependencies';
 setup(createServices());

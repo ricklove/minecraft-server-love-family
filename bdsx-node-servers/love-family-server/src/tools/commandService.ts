@@ -1,4 +1,4 @@
-import { NetworkIdentifier } from "../bdsx-dependencies/types";
+import { NetworkIdentifier } from "../types";
 
 export type CommandServiceDependencyType = {
     onPlayerCommand: (callback: (args: { command: string, networkIdentifier: NetworkIdentifier }) => void) => void,

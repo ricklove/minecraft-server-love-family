@@ -1,9 +1,9 @@
 import { command, createPacket, netevent, NetworkIdentifier, PacketId, sendPacket } from "bdsx";
-import { CommandServiceDependencyType, createCommandService } from "../tools/commandService";
-import { createFormsApi, FormsApiDependenciesType } from "../tools/formsApi";
-import { ConnectionsTrackingServiceDependencies, ConnectionsTrackingServiceType, createConnectionsTrackingService } from "../tools/playerConnections";
-import { ServicesType } from "../tools/services";
-import { NetworkIdentifier as NetworkIdentifierAlias } from "./types";
+import { CommandServiceDependencyType, createCommandService } from "../src/tools/commandService";
+import { createFormsApi, FormsApiDependenciesType } from "../src/tools/formsApi";
+import { ConnectionsTrackingServiceDependencies, ConnectionsTrackingServiceType, createConnectionsTrackingService } from "../src/tools/playerConnections";
+import { ServicesType } from "../src/tools/services";
+import { NetworkIdentifier as NetworkIdentifierAlias } from "../src/types";
 
 const getNetworkIdentifier = (networkIdentifier: NetworkIdentifierAlias) => networkIdentifier as unknown as NetworkIdentifier;
 const getNetworkIdentifierAlias = (networkIdentifier: NetworkIdentifier) => networkIdentifier as unknown as NetworkIdentifierAlias;
@@ -14,7 +14,7 @@ export const createFormsApiDependencies = (): FormsApiDependenciesType => {
             let packet = createPacket(PacketId.ModalFormRequest);
             packet.setUint32(formId, 0x28);
             packet.setCxxString(content, 0x30);
-            sendPacket(networkIdentifier, packet);
+            sendPacket(getNetworkIdentifier(networkIdentifier), packet);
             packet.dispose();
         },
         onFormResponse: (callback) => {
