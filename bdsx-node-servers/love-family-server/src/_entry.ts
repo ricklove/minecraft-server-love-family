@@ -350,7 +350,7 @@ export const setup = (services: ServicesType) => {
     };
 
     // console.log('process.execPath', process.execPath);
-    const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '_data'));
+    const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '../../_data'));
     const gameConsequences = createGameConsequences(system);
     const startStudyGame = () => {
         console.log('startMathGame');
