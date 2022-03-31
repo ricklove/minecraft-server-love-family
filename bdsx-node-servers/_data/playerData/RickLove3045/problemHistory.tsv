@@ -14060,3 +14060,4 @@ correct 	spelling:chat-only:5 	2.6secs 	conceit:3 	con____ 	== 	___ceit 	RunAve=
 correct 	spelling:chat-only:5 	2.0secs 	commute:2 	co_____ 	== 	__mmute 	RunAve=runAve spelling:chat-only:5: 25/25 100% 2.6secs 	Tue Mar 02 2021 19:14:41 GMT-0600 (Central Standard Time)
 correct 	math:* 	2.1secs 	10 * 6 	What is 10 * 6? 	== 	60 	RunAve=runAve math:*: 25/25 100% 1.9secs 	Tue Mar 02 2021 19:15:05 GMT-0600 (Central Standard Time)
 correct 	spelling:chat-only:5 	1.7secs 	regularly:1 	r________ 	== 	_egularly 	RunAve=runAve spelling:chat-only:5: 25/25 100% 2.6secs 	Tue Mar 02 2021 19:16:18 GMT-0600 (Central Standard Time)
+wrong 	spanish:chat-only:[Start] 	3.2secs 	Excuse me. (Said on leaving a group): 	Con permiso. 	!= 	It's a pleasure. 	RunAve=runAve spanish:chat-only:[Start]: 0/1  0% 3.2secs 	Fri Mar 19 2021 18:11:04 GMT-0500 (Central Daylight Time)
