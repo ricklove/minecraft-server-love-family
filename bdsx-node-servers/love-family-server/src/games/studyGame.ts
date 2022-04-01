@@ -568,6 +568,8 @@ export const studyGame = {
         const p = gameState.playerStates.get(playerName);
         if(!p){ return; }
         p.selectedSubjectCategories = [];
+        p.problemQueue = [];
+        p.reviewProblems = [];
         p.isReady = false;
     },
     stopStudyGame: stopStudyGame,
