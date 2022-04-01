@@ -537,8 +537,20 @@ const stopStudyGame = () => {
 
         clearTimeout(p.nextProblemTimerId);
         p.nextProblemTimerId = null;
+
+        resetSubjects(p.playerName);
     }
 };
+
+const resetSubjects = (playerName: string) => {
+    console.log('resetSubjects', { playerName });
+    const p = gameState.playerStates.get(playerName);
+    if(!p){ return; }
+    p.selectedSubjectCategories = [];
+    p.problemQueue = [];
+    p.reviewProblems = [];
+    p.isReady = false;
+}
 
 type PlayerState = {
     nextProblemTimerId: null | ReturnType<typeof setTimeout>,
@@ -563,15 +575,7 @@ const gameState = {
 export const studyGame = {
     test_sendStudyFormWithResult: sendStudyFormWithResult,
     startStudyGame: continueStudyGame,
-    resetSubjects: (playerName) => {
-        console.log('resetSubjects', { playerName });
-        const p = gameState.playerStates.get(playerName);
-        if(!p){ return; }
-        p.selectedSubjectCategories = [];
-        p.problemQueue = [];
-        p.reviewProblems = [];
-        p.isReady = false;
-    },
+    resetSubjects,
     stopStudyGame: stopStudyGame,
     isRunning: () => !!gameState.timeoutId,
 };
