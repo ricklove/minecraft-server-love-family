@@ -1,0 +1,6 @@
+{
+    "private": true,
+    "scripts": {
+        "start": "cd bdsx-node-servers/love-family-server && run.bat"
+    }
+}
