@@ -461,7 +461,9 @@ const continueStudyGame = (
                 },
             });
 
-            const subjectFormDataResult = subjectResponse.formData as { [subjectKey: string]: { value: boolean } };
+            const subjectFormDataResult = subjectResponse.formData as null | { [subjectKey: string]: { value: boolean } };
+            if(!subjectFormDataResult){ return; }
+
             const enabledSubjects = allSubjects.filter(x => subjectFormDataResult[x.subjectKey].value);
 
             // Get the selected categories for each enabled subject
@@ -486,7 +488,9 @@ const continueStudyGame = (
                     },
                 });
 
-                const formDataResult = response.formData as { [categoryKey: string]: { value: boolean } };
+                const formDataResult = response.formData as null | { [categoryKey: string]: { value: boolean } };
+                if(!formDataResult){ return; }
+
                 const selectedSubjectCategories = subjectCategories.filter(x => formDataResult[x.categoryKey].value);
                 allSelectedSubjectCategories.push(...selectedSubjectCategories.map(x => ({ subjectKey: s.subjectKey, categoryKey: x.categoryKey })));
             }
@@ -559,6 +563,13 @@ const gameState = {
 export const studyGame = {
     test_sendStudyFormWithResult: sendStudyFormWithResult,
     startStudyGame: continueStudyGame,
+    resetSubjects: (playerName) => {
+        console.log('resetSubjects', { playerName });
+        const p = gameState.playerStates.get(playerName);
+        if(!p){ return; }
+        p.selectedSubjectCategories = [];
+        p.isReady = false;
+    },
     stopStudyGame: stopStudyGame,
     isRunning: () => !!gameState.timeoutId,
 };

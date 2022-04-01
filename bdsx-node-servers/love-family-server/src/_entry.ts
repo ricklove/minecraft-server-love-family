@@ -49,6 +49,7 @@ export const setup = (services: ServicesType) => {
             return;
         }
         const playerName = name.data.name;
+        console.log(`onPlayerCommand`, { playerName, cmd });
 
         if (cmd.toLowerCase().startsWith('/form modal')) {
             (async () => {
@@ -87,6 +88,10 @@ export const setup = (services: ServicesType) => {
         }
         if (cmd.toLowerCase().startsWith('/study stop')) {
             studyGame.stopStudyGame();
+            return CANCEL;
+        }
+        if (cmd.toLowerCase().startsWith('/study change')) {
+            studyGame.resetSubjects(playerName);
             return CANCEL;
         }
 
@@ -353,7 +358,7 @@ export const setup = (services: ServicesType) => {
     const fileWriterService = createFileWriterService(path.join(path.dirname(process.execPath), '../../_data'));
     const gameConsequences = createGameConsequences(system);
     const startStudyGame = () => {
-        console.log('startMathGame');
+        console.log('startStudyGame');
         studyGame.startStudyGame(formsApi, commandsApi, gameConsequences, {
             intervalTimeMs: 20 * 1000,
             players: connectionsApi.getPlayerConnections(),
@@ -366,7 +371,7 @@ export const setup = (services: ServicesType) => {
     connectionsApi.onPlayersChange(({ action }) => {
         // if (action === 'dropped') { return; }
 
-        // Restart math game if running and new player joined
+        // Restart study game if running and new player joined
         console.log('Restart math game if running');
         if (studyGame.isRunning()) {
             startStudyGame();
@@ -381,7 +386,7 @@ export const setup = (services: ServicesType) => {
             // Stop Form Timeout timers
             formsApi.stop();
 
-            // Make sure math game is shutdown
+            // Make sure study game is shutdown
             studyGame.stopStudyGame();
         }
     })
