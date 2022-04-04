@@ -1,0 +1,13 @@
+
+- [ ] Worlds
+    - [ ] Change world
+- [ ] School
+    - [ ] Show players
+    - [ ] Show player subject reports
+    - [ ] Control player settings
+    - [ ] External Problem Mode
+        - [ ] Show countdown in game
+        - [ ] Problems in web
+        - [ ] Auto-spectator mode? (alt tab to web)
+- [ ] Maps
+    - [ ] Show player positions on map
