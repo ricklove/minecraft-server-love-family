@@ -1,6 +1,9 @@
 {
     "private": true,
     "scripts": {
-        "start": "cd bdsx-node-servers/love-family-server && run.bat"
+        "start": "cd bdsx-node-servers/love-family-server && run.bat",
+        "map": "npm run map-overworld && npm run map-nether",
+        "map-overworld": "..\\minecraft\\unmined-cli_0.18.14-dev_net6.0-win-64bit_sc\\unmined-cli web render --world=\"C:\\Games\\minecraft-server-love-family\\bdsx-node-servers\\bdsx\\bedrock_server\\worlds\\Bedrock level\" --output=\"C:\\Games\\minecraft-server-love-family\\maps\\MainSchoolWorld\\overworld\" --zoomin=-4 --shadows=true --dimension=overworld",
+        "map-nether": "..\\minecraft\\unmined-cli_0.18.14-dev_net6.0-win-64bit_sc\\unmined-cli web render --world=\"C:\\Games\\minecraft-server-love-family\\bdsx-node-servers\\bdsx\\bedrock_server\\worlds\\Bedrock level\" --output=\"C:\\Games\\minecraft-server-love-family\\maps\\MainSchoolWorld\\nether\" --zoomin=-4 --shadows=true --dimension=nether"
     }
 }

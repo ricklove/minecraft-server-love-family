@@ -1,3 +1,5 @@
 node_modules
 *.lnk
 _external
+maps/
+temp/
